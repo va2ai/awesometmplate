@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ directory.title }} - Awesome Directory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .modal-backdrop {
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+    }
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
+    .loading-spin { animation: spin-slow 1s linear infinite; }
+    .detail-desc { white-space: pre-line; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- FIXED NAV -->
+  <header id="navbar" class="fixed left-0 right-0 z-50 backdrop-blur-md border-b transition-all duration-300 bg-orange-500/90 border-orange-600/40 shadow-sm">
+    <nav class="mx-auto max-w-7xl px-6 lg:px-0">
+      <div class="flex h-16 lg:h-14 items-center justify-between">
+        <a href="/" class="font-black text-white text-lg tracking-tight">Awesome Directory</a>
+        <div class="flex items-center gap-3">
+          <!-- Token tracker badge -->
+          <button onclick="toggleTokenPanel()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 text-xs font-bold border border-white/20 transition-colors flex items-center gap-1.5" title="Token Usage">
+            <iconify-icon icon="ph:coins-bold"></iconify-icon>
+            <span id="navTokenCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</span>
+          </button>
+          <button onclick="openResearchModal()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 text-sm font-bold border border-white/30 transition-colors">
+            <iconify-icon icon="ph:plus-bold" class="mr-1"></iconify-icon> New Research
+          </button>
+          <button onclick="openAddModal()" class="bg-white text-orange-600 px-4 py-2 text-sm font-bold border-2 border-black hover:shadow-lg transition-shadow">
+            <iconify-icon icon="ph:brain-bold" class="mr-1"></iconify-icon> Smart Add
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- TOKEN PANEL (slide-down) -->
+  <div id="tokenPanel" class="fixed top-14 right-6 z-[60] hidden">
+    <div class="bg-white border-2 border-black shadow-lg w-72">
+      <div class="bg-gray-900 text-white px-4 py-2 border-b-2 border-black flex items-center justify-between">
+        <span class="font-bold text-sm flex items-center gap-1.5">
+          <iconify-icon icon="ph:chart-bar-bold"></iconify-icon> Token Usage
+        </span>
+        <button onclick="toggleTokenPanel()" class="text-gray-400 hover:text-white">
+          <iconify-icon icon="ph:x-bold"></iconify-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-blue-50 border border-blue-200 p-2 text-center">
+            <div class="text-lg font-black text-blue-700" id="panelInputTokens">{{ "{:,}".format(tokens.total_input) }}</div>
+            <div class="text-[10px] font-bold text-blue-500 uppercase">Input Tokens</div>
+          </div>
+          <div class="bg-green-50 border border-green-200 p-2 text-center">
+            <div class="text-lg font-black text-green-700" id="panelOutputTokens">{{ "{:,}".format(tokens.total_output) }}</div>
+            <div class="text-[10px] font-bold text-green-500 uppercase">Output Tokens</div>
+          </div>
+        </div>
+        <div class="bg-orange-50 border border-orange-200 p-2 text-center">
+          <div class="text-xl font-black text-orange-700" id="panelCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</div>
+          <div class="text-[10px] font-bold text-orange-500 uppercase">Total Cost ({{ tokens.calls }} calls)</div>
+        </div>
+        <div class="text-[10px] text-gray-400 text-center">Sonnet 4: $3/M in, $15/M out</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="bg-orange-500 text-white p-6 pt-32 pb-16">
+    <div class="max-w-7xl mx-auto text-center relative">
+      <h1 class="text-5xl md:text-7xl font-black tracking-tighter mb-4">{{ directory.title }}</h1>
+      <p class="text-lg text-orange-100 max-w-2xl mx-auto mb-8">{{ directory.subtitle or "Curated resources organized by Claude AI" }}</p>
+
+      {% if directory.sections %}
+      <div class="flex flex-wrap justify-center gap-2">
+        {% for section in directory.sections %}
+        <button onclick="scrollToSection('section-{{ loop.index0 }}')"
+                class="px-4 py-3 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold transition-colors border border-white/20">
+          {{ section.title }}
+        </button>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="border-2 border-dashed border-white/40 rounded-lg p-8 max-w-lg mx-auto">
+        <iconify-icon icon="ph:sparkle-bold" width="40" class="mb-3 opacity-70"></iconify-icon>
+        <p class="text-orange-100 mb-4">No content yet. Start by researching a topic or adding items manually.</p>
+        <button onclick="openResearchModal()" class="bg-white text-orange-600 px-6 py-3 font-bold border-2 border-black hover:shadow-lg transition-shadow">
+          <iconify-icon icon="ph:magnifying-glass-bold" class="mr-1"></iconify-icon> Research a Topic
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="max-w-7xl mx-auto px-6 xl:px-0 py-8 relative">
+    {% for section in directory.sections %}
+    <div id="section-{{ loop.index0 }}" class="mb-12 relative z-10">
+
+      <!-- SECTION HEADER -->
+      <div class="bg-{{ section.color or 'orange' }}-500 text-white px-4 py-2 mb-4 border-2 border-black">
+        <h2 class="text-xl font-black flex items-center gap-2">
+          <iconify-icon icon="ph:{{ section.icon_class.replace('i-ph:', '') if section.icon_class else 'folder-bold' }}"></iconify-icon>
+          {{ section.title }}
+          {% if section.stars %}
+          <span class="ml-auto bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+            <iconify-icon icon="ph:star-fill"></iconify-icon> {{ section.stars }}
+          </span>
+          {% endif %}
+        </h2>
+      </div>
+
+      <!-- SECTION DESCRIPTION + URL -->
+      {% if section.description or section.url %}
+      <div class="mb-4 flex items-start justify-between">
+        <p class="text-sm text-gray-700 max-w-3xl">{{ section.description }}</p>
+        {% if section.url %}
+        <a href="{{ section.url }}" target="_blank" rel="noopener"
+           class="text-xs text-blue-600 hover:underline flex items-center gap-1 flex-shrink-0 ml-4">
+          <iconify-icon icon="ph:arrow-up-right"></iconify-icon>
+          {{ section.url | replace('https://', '') | replace('http://', '') }}
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- BLOCKS -->
+      {% for block in section.blocks %}
+
+        <!-- BLOCK LABEL -->
+        {% if block.label %}
+        <div class="mb-2 mt-4">
+          <span class="inline-block bg-gray-100 border border-gray-200 px-3 py-1 text-xs font-bold text-gray-700 uppercase tracking-wide">
+            {{ block.label }}
+          </span>
+        </div>
+        {% endif %}
+
+        <!-- CODE GRID -->
+        {% if block.type == "code_grid" %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {% for card in block.content.get("cards", []) %}
+          <div class="bg-white border-2 border-black hover:shadow-lg transition-shadow">
+            <div class="p-3 border-b border-gray-200">
+              <h3 class="text-xs font-bold text-black">{{ card.get("title", "") }}</h3>
+              {% if card.get("description") %}
+              <p class="text-xs text-gray-600 mt-1 detail-desc">{{ card.get("description", "") }}</p>
+              {% endif %}
+            </div>
+            {% if card.get("code") %}
+            <div class="p-3">
+              <div class="bg-gray-900 text-green-400 px-3 py-2 rounded font-mono text-xs relative group overflow-x-auto">
+                <pre><code>{{ card.get("code", "") }}</code></pre>
+                <button onclick="copyCode(this)" class="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 rounded copy-btn">
+                  <iconify-icon icon="ph:copy-bold" class="text-gray-400 hover:text-white"></iconify-icon>
+                </button>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- LINK LIST -->
+        {% elif block.type == "link_list" %}
+        <div class="mb-6 border-l border-r border-gray-200 bg-white">
+          {% for item in block.content.get("items", []) %}
+          <a href="{{ item.get('url', '#') }}" target="_blank" rel="noopener"
+             class="flex items-center gap-4 p-3 hover:bg-gray-50 transition-colors border-b border-gray-200 {% if loop.first %}border-t{% endif %}">
+            {% if item.get("url") %}
+            <img src="https://www.google.com/s2/favicons?domain={{ item.get('url', '') }}&sz=32"
+                 alt="" class="w-6 h-6 flex-shrink-0 rounded-full"
+                 onerror="this.style.display='none'">
+            {% else %}
+            <iconify-icon icon="ph:link-bold" class="w-6 h-6 flex-shrink-0 text-gray-400"></iconify-icon>
+            {% endif %}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-md font-bold text-black truncate">{{ item.get("title", "") }}</h3>
+                {% if item.get("stars") %}
+                <div class="bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm ml-2">
+                  <iconify-icon icon="ph:star-fill"></iconify-icon> {{ item.get("stars", "") }}
+                </div>
+                {% endif %}
+              </div>
+              {% if item.get("description") %}
+              <p class="text-sm text-gray-600 line-clamp-2">{{ item.get("description", "") }}</p>
+              {% endif %}
+              {% if item.get("url") %}
+              <div class="text-xs text-blue-600 mt-1 truncate">{{ item.get("url", "") | replace('https://', '') | replace('http://', '') }}</div>
+              {% endif %}
+            </div>
+            <iconify-icon icon="ph:arrow-up-right" class="text-gray-400 flex-shrink-0"></iconify-icon>
+          </a>
+          {% endfor %}
+        </div>
+
+        <!-- INFO GRID -->
+        {% elif block.type == "info_grid" %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {% for card in block.content.get("cards", []) %}
+          <div class="bg-white border-2 border-black p-4 hover:shadow-lg transition-shadow">
+            <div class="flex items-start gap-3">
+              {% if card.get("icon") %}
+              <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-{{ section.color or 'orange' }}-500 flex-shrink-0 mt-0.5"></iconify-icon>
+              {% endif %}
+              <div>
+                <h3 class="text-sm font-bold text-black">{{ card.get("title", "") }}</h3>
+                {% if card.get("description") %}
+                <p class="text-xs text-gray-600 mt-1 detail-desc">{{ card.get("description", "") }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- COMPARISON -->
+        {% elif block.type == "comparison" %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {% for item in block.content.get("items", []) %}
+          <div class="bg-white border-2 border-black">
+            <div class="px-4 py-2 border-b-2 border-black bg-gray-50">
+              <h3 class="text-sm font-black {% if 'pro' in item.get('label', '').lower() %}text-green-700{% elif 'con' in item.get('label', '').lower() %}text-red-700{% else %}text-gray-800{% endif %}">
+                {% if 'pro' in item.get('label', '').lower() %}<iconify-icon icon="ph:check-circle-bold" class="mr-1"></iconify-icon>
+                {% elif 'con' in item.get('label', '').lower() %}<iconify-icon icon="ph:x-circle-bold" class="mr-1"></iconify-icon>
+                {% endif %}{{ item.get("label", "") }}
+              </h3>
+            </div>
+            <ul class="p-4 space-y-2">
+              {% for point in item.get("points", []) %}
+              <li class="text-xs text-gray-700 flex items-start gap-2">
+                <span class="text-gray-400 mt-0.5">-</span>
+                <span>{{ point }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- STATS -->
+        {% elif block.type == "stats" %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {% for card in block.content.get("cards", []) %}
+          <div class="bg-white border-2 border-black p-4 text-center hover:shadow-lg transition-shadow">
+            <div class="text-2xl font-black text-{{ section.color or 'orange' }}-600">{{ card.get("value", "") }}</div>
+            <div class="text-xs font-bold text-gray-800 mt-1">{{ card.get("label", "") }}</div>
+            {% if card.get("description") %}
+            <div class="text-[10px] text-gray-500 mt-1">{{ card.get("description", "") }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- STEPS -->
+        {% elif block.type == "steps" %}
+        <div class="space-y-4 mb-6">
+          {% for step in block.content.get("items", []) %}
+          <div class="bg-white border-2 border-black hover:shadow-lg transition-shadow">
+            <div class="flex items-start gap-4 p-4">
+              <div class="bg-{{ section.color or 'orange' }}-500 text-white w-8 h-8 flex items-center justify-center font-black text-sm flex-shrink-0 border-2 border-black">
+                {{ loop.index }}
+              </div>
+              <div class="flex-1">
+                <h3 class="text-sm font-bold text-black">{{ step.get("title", "") }}</h3>
+                {% if step.get("description") %}
+                <p class="text-xs text-gray-600 mt-1 detail-desc">{{ step.get("description", "") }}</p>
+                {% endif %}
+                {% if step.get("code") %}
+                <div class="mt-2 bg-gray-900 text-green-400 px-3 py-2 rounded font-mono text-xs relative group overflow-x-auto">
+                  <pre><code>{{ step.get("code", "") }}</code></pre>
+                  <button onclick="copyCode(this)" class="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 rounded copy-btn">
+                    <iconify-icon icon="ph:copy-bold" class="text-gray-400 hover:text-white"></iconify-icon>
+                  </button>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- TIP -->
+        {% elif block.type == "tip" %}
+        <div class="bg-yellow-50 border-2 border-black p-4 mb-6 flex items-start gap-3">
+          <iconify-icon icon="ph:lightbulb-bold" width="20" class="text-yellow-600 flex-shrink-0 mt-0.5"></iconify-icon>
+          <div>
+            {% if block.label %}<span class="text-xs font-bold text-yellow-800 uppercase">{{ block.label }}</span>{% endif %}
+            <p class="text-sm text-gray-700 detail-desc">{{ block.content.get("text", "") }}</p>
+          </div>
+        </div>
+
+        <!-- TEXT -->
+        {% elif block.type == "text" %}
+        <div class="bg-white border border-gray-200 p-4 mb-6">
+          <p class="text-sm text-gray-700 detail-desc">{{ block.content.get("text", "") }}</p>
+        </div>
+
+        <!-- TABLE -->
+        {% elif block.type == "table" %}
+        <div class="mb-6 overflow-x-auto">
+          <table class="w-full bg-white border-2 border-black text-sm">
+            <thead>
+              <tr class="bg-gray-100 border-b-2 border-black">
+                {% for header in block.content.get("headers", []) %}
+                <th class="px-4 py-2 text-left font-bold text-xs uppercase text-gray-700 border-r border-gray-200 last:border-r-0">{{ header }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in block.content.get("rows", []) %}
+              <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors {% if loop.index is odd %}bg-white{% else %}bg-gray-50/50{% endif %}">
+                {% for cell in row.get("cells", []) if row is mapping %}
+                <td class="px-4 py-2 text-gray-700 border-r border-gray-200 last:border-r-0">{{ cell }}</td>
+                {% endfor %}
+                {% if row is sequence and row is not mapping %}
+                {% for cell in row %}
+                <td class="px-4 py-2 text-gray-700 border-r border-gray-200 last:border-r-0">{{ cell }}</td>
+                {% endfor %}
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- FAQ -->
+        {% elif block.type == "faq" %}
+        <div class="space-y-3 mb-6">
+          {% for item in block.content.get("items", []) %}
+          <details class="bg-white border-2 border-black group">
+            <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between">
+              <span class="text-sm font-bold text-black flex items-center gap-2">
+                <iconify-icon icon="ph:question-bold" class="text-{{ section.color or 'orange' }}-500"></iconify-icon>
+                {{ item.get("question", "") }}
+              </span>
+              <iconify-icon icon="ph:caret-down-bold" class="text-gray-400 transition-transform group-open:rotate-180"></iconify-icon>
+            </summary>
+            <div class="px-4 py-3 border-t border-gray-200 text-sm text-gray-700 detail-desc">{{ item.get("answer", "") }}</div>
+          </details>
+          {% endfor %}
+        </div>
+
+        <!-- TIMELINE -->
+        {% elif block.type == "timeline" %}
+        <div class="mb-6 relative">
+          <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-{{ section.color or 'orange' }}-300"></div>
+          {% for event in block.content.get("events", []) %}
+          <div class="relative pl-10 pb-6 last:pb-0">
+            <div class="absolute left-2.5 top-1.5 w-3 h-3 bg-{{ section.color or 'orange' }}-500 border-2 border-white rounded-full"></div>
+            <div class="bg-white border-2 border-black p-3 hover:shadow-lg transition-shadow">
+              {% if event.get("date") %}
+              <span class="text-[10px] font-bold text-{{ section.color or 'orange' }}-600 uppercase">{{ event.get("date", "") }}</span>
+              {% endif %}
+              <h4 class="text-sm font-bold text-black">{{ event.get("title", "") }}</h4>
+              {% if event.get("description") %}
+              <p class="text-xs text-gray-600 mt-1 detail-desc">{{ event.get("description", "") }}</p>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- ALERT -->
+        {% elif block.type == "alert" %}
+        {% set severity = block.content.get("severity", "info") %}
+        {% if severity == "warning" %}
+        {% set alert_bg = "bg-yellow-50" %}{% set alert_border = "border-yellow-400" %}{% set alert_icon = "ph:warning-bold" %}{% set alert_text = "text-yellow-800" %}{% set alert_icon_color = "text-yellow-600" %}
+        {% elif severity == "error" %}
+        {% set alert_bg = "bg-red-50" %}{% set alert_border = "border-red-400" %}{% set alert_icon = "ph:x-circle-bold" %}{% set alert_text = "text-red-800" %}{% set alert_icon_color = "text-red-600" %}
+        {% elif severity == "success" %}
+        {% set alert_bg = "bg-green-50" %}{% set alert_border = "border-green-400" %}{% set alert_icon = "ph:check-circle-bold" %}{% set alert_text = "text-green-800" %}{% set alert_icon_color = "text-green-600" %}
+        {% else %}
+        {% set alert_bg = "bg-blue-50" %}{% set alert_border = "border-blue-400" %}{% set alert_icon = "ph:info-bold" %}{% set alert_text = "text-blue-800" %}{% set alert_icon_color = "text-blue-600" %}
+        {% endif %}
+        <div class="{{ alert_bg }} border-2 border-black border-l-4 {{ alert_border }} p-4 mb-6 flex items-start gap-3">
+          <iconify-icon icon="{{ alert_icon }}" width="20" class="{{ alert_icon_color }} flex-shrink-0 mt-0.5"></iconify-icon>
+          <div>
+            {% if block.label %}<span class="text-xs font-bold {{ alert_text }} uppercase">{{ block.label }}</span>{% endif %}
+            <p class="text-sm {{ alert_text }} detail-desc">{{ block.content.get("text", "") }}</p>
+          </div>
+        </div>
+
+        <!-- BADGES -->
+        {% elif block.type == "badges" %}
+        <div class="flex flex-wrap gap-2 mb-6">
+          {% for badge in block.content.get("items", []) %}
+          {% set badge_color = badge.get("color", "gray") %}
+          <span class="inline-flex items-center px-3 py-1.5 text-xs font-bold border-2 border-black bg-{{ badge_color }}-100 text-{{ badge_color }}-800 hover:shadow-md transition-shadow">
+            <iconify-icon icon="ph:tag-bold" class="mr-1.5 text-{{ badge_color }}-500" width="12"></iconify-icon>
+            {{ badge.get("label", "") }}
+          </span>
+          {% endfor %}
+        </div>
+
+        <!-- CHECKLIST -->
+        {% elif block.type == "checklist" %}
+        <div class="bg-white border-2 border-black mb-6">
+          {% for item in block.content.get("items", []) %}
+          <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors">
+            {% if item.get("checked") %}
+            <iconify-icon icon="ph:check-square-bold" width="18" class="text-green-500 flex-shrink-0"></iconify-icon>
+            <span class="text-sm text-gray-500 line-through">{{ item.get("text", "") }}</span>
+            {% else %}
+            <iconify-icon icon="ph:square-bold" width="18" class="text-gray-300 flex-shrink-0"></iconify-icon>
+            <span class="text-sm text-gray-700">{{ item.get("text", "") }}</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        {% endif %}
+      {% endfor %}
+
+      <!-- Fallback: old-style detail_cards if present -->
+      {% if section.detail_cards is defined and section.detail_cards %}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {% for card in section.detail_cards %}
+        <div class="bg-white border-2 border-black hover:shadow-lg transition-shadow">
+          <div class="p-3 border-b border-gray-200">
+            <h3 class="text-xs font-bold text-black">{{ card.title }}</h3>
+            {% if card.description %}
+            <p class="text-xs text-gray-600 mt-1 detail-desc">{{ card.description }}</p>
+            {% endif %}
+          </div>
+          {% if card.code %}
+          <div class="p-3">
+            <div class="bg-gray-900 text-green-400 px-3 py-2 rounded font-mono text-xs relative group overflow-x-auto">
+              <pre><code>{{ card.code }}</code></pre>
+              <button onclick="copyCode(this)" class="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 rounded copy-btn">
+                <iconify-icon icon="ph:copy-bold" class="text-gray-400 hover:text-white"></iconify-icon>
+              </button>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Fallback: old-style subsections if present -->
+      {% if section.subsections is defined %}
+      {% for sub in section.subsections %}
+      <div class="mb-6 border-l border-r border-gray-200 bg-white">
+        <div class="inline-block bg-white border-t border-r border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700">
+          {{ sub.label }}
+        </div>
+        {% for item in sub.items %}
+        <a href="{{ item.url or '#' }}" target="_blank" rel="noopener"
+           class="flex items-center gap-4 p-3 hover:bg-gray-50 transition-colors border-b border-gray-200 {% if loop.first %}border-t{% endif %}">
+          <div class="flex-1 min-w-0">
+            <h3 class="text-md font-bold text-black truncate">{{ item.title }}</h3>
+            {% if item.description %}<p class="text-sm text-gray-600 line-clamp-2">{{ item.description }}</p>{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      {% endif %}
+
+    </div>
+    {% endfor %}
+
+    {% if not directory.sections %}
+    <div class="text-center py-20 text-gray-400">
+      <iconify-icon icon="ph:folder-dashed-bold" width="64" class="mb-4"></iconify-icon>
+      <p class="text-lg">Your directory is empty</p>
+    </div>
+    {% endif %}
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t-2 border-black mt-16">
+    <div class="max-w-7xl mx-auto px-6 lg:px-0 py-10">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
+        <div>
+          <h3 class="font-black text-lg mb-2">Awesome Directory</h3>
+          <p class="text-sm text-gray-600">Organize and display any collection of resources using Claude AI. Inspired by awesomeclaude.ai.</p>
+        </div>
+        <div>
+          <h4 class="font-bold text-sm mb-3">Actions</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" onclick="openResearchModal(); return false;" class="text-blue-600 hover:underline">Research a Topic</a></li>
+            <li><a href="#" onclick="openAddModal(); return false;" class="text-blue-600 hover:underline">Smart Add</a></li>
+            <li><a href="#" onclick="reorganize(); return false;" class="text-blue-600 hover:underline">Reorganize with AI</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-bold text-sm mb-3">Token Usage</h4>
+          <ul class="space-y-2 text-sm text-gray-600">
+            <li>Total Cost: ${{ "%.4f"|format(tokens.total_cost_usd) }}</li>
+            <li>API Calls: {{ tokens.calls }}</li>
+            <li>Model: Claude Sonnet 4</li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-gray-200 pt-8 text-sm text-gray-500">
+        Powered by Claude AI &bull; Built with FastAPI
+      </div>
+    </div>
+  </footer>
+
+  <!-- RESEARCH MODAL -->
+  <div id="researchModal" class="fixed inset-0 z-[100] hidden">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white border-2 border-black w-full max-w-lg relative">
+        <div class="bg-orange-500 text-white px-4 py-3 border-b-2 border-black">
+          <h2 class="font-black flex items-center gap-2">
+            <iconify-icon icon="ph:magnifying-glass-bold"></iconify-icon>
+            Research a Topic
+          </h2>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="text-xs font-bold text-black block mb-1">Topic</label>
+            <input id="researchTopic" type="text" placeholder="e.g. Best Python web frameworks 2026"
+                   class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-black block mb-1">Instructions (optional)</label>
+            <textarea id="researchInstructions" rows="3" placeholder="e.g. Focus on async frameworks, include benchmarks..."
+                      class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"></textarea>
+          </div>
+          <p class="text-[10px] text-gray-400">This replaces the entire directory with new research results.</p>
+          <div class="flex gap-2">
+            <button onclick="doResearch()" id="researchBtn"
+                    class="flex-1 bg-orange-500 text-white px-4 py-3 font-bold border-2 border-black hover:shadow-lg transition-shadow text-sm">
+              <iconify-icon icon="ph:sparkle-bold" class="mr-1"></iconify-icon> Research with Claude
+            </button>
+            <button onclick="closeModals()" class="px-4 py-3 border-2 border-black text-sm font-bold hover:bg-gray-50">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMART ADD MODAL -->
+  <div id="addModal" class="fixed inset-0 z-[100] hidden">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white border-2 border-black w-full max-w-lg relative">
+        <div class="bg-violet-600 text-white px-4 py-3 border-b-2 border-black">
+          <h2 class="font-black flex items-center gap-2">
+            <iconify-icon icon="ph:brain-bold"></iconify-icon>
+            Smart Add
+          </h2>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="text-xs font-bold text-black block mb-1">Topic / Item</label>
+            <input id="addTopic" type="text" placeholder="e.g. Redis, Docker, TailwindCSS..."
+                   class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-black block mb-1">Description / Context (optional)</label>
+            <textarea id="addDescription" rows="3" placeholder="Any details to help Claude categorize and research this..."
+                      class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"></textarea>
+          </div>
+          <p class="text-[10px] text-gray-400">Claude will decide where this fits in the existing directory, or create a new category. Max 8 categories before auto-restructure.</p>
+          <div class="flex gap-2">
+            <button onclick="doSmartAdd()" class="flex-1 bg-violet-600 text-white px-4 py-3 font-bold border-2 border-black hover:shadow-lg transition-shadow text-sm">
+              <iconify-icon icon="ph:brain-bold" class="mr-1"></iconify-icon> Smart Add
+            </button>
+            <button onclick="closeModals()" class="px-4 py-3 border-2 border-black text-sm font-bold hover:bg-gray-50">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay" class="fixed inset-0 z-[200] hidden">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="bg-white border-2 border-black p-8 text-center">
+        <iconify-icon icon="ph:circle-notch-bold" width="48" class="loading-spin text-orange-500 mb-4"></iconify-icon>
+        <p class="font-bold text-lg" id="loadingText">Claude is researching...</p>
+        <p class="text-sm text-gray-500 mt-2">This may take a minute</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function scrollToSection(id) {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function copyCode(btn) {
+      var code = btn.closest('.group').querySelector('code').textContent;
+      navigator.clipboard.writeText(code);
+      var icon = btn.querySelector('iconify-icon');
+      icon.setAttribute('icon', 'ph:check-bold');
+      icon.className = 'text-green-400';
+      setTimeout(function() {
+        icon.setAttribute('icon', 'ph:copy-bold');
+        icon.className = 'text-gray-400 hover:text-white';
+      }, 2000);
+    }
+
+    function openResearchModal() { document.getElementById('researchModal').classList.remove('hidden'); }
+    function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
+    function closeModals() {
+      document.getElementById('researchModal').classList.add('hidden');
+      document.getElementById('addModal').classList.add('hidden');
+    }
+
+    function toggleTokenPanel() {
+      var panel = document.getElementById('tokenPanel');
+      panel.classList.toggle('hidden');
+    }
+
+    // Close token panel on outside click
+    document.addEventListener('click', function(e) {
+      var panel = document.getElementById('tokenPanel');
+      if (!panel.classList.contains('hidden') && !panel.contains(e.target) && !e.target.closest('[onclick*="toggleTokenPanel"]')) {
+        panel.classList.add('hidden');
+      }
+    });
+
+    function showLoading(text) {
+      document.getElementById('loadingText').textContent = text || 'Claude is working...';
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+    async function doResearch() {
+      var topic = document.getElementById('researchTopic').value.trim();
+      if (!topic) return alert('Please enter a topic');
+      closeModals();
+      showLoading('Claude is researching "' + topic + '"...');
+      try {
+        var res = await fetch('/api/research', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: topic,
+            instructions: document.getElementById('researchInstructions').value.trim()
+          })
+        });
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        location.reload();
+      } catch (e) {
+        hideLoading();
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function doSmartAdd() {
+      var topic = document.getElementById('addTopic').value.trim();
+      if (!topic) return alert('Please enter a topic');
+      closeModals();
+      showLoading('Claude is adding "' + topic + '" to the knowledge base...');
+      try {
+        var res = await fetch('/api/smart-add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: topic,
+            description: document.getElementById('addDescription').value.trim()
+          })
+        });
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        location.reload();
+      } catch (e) {
+        hideLoading();
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function reorganize() {
+      var instructions = prompt('How should Claude reorganize this directory?', 'Reorganize into better categories and improve descriptions');
+      if (!instructions) return;
+      showLoading('Claude is reorganizing...');
+      try {
+        var res = await fetch('/api/organize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instructions: instructions })
+        });
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        location.reload();
+      } catch (e) {
+        hideLoading();
+        alert('Error: ' + e.message);
+      }
+    }
+
+    window.addEventListener('scroll', function() {
+      var nav = document.getElementById('navbar');
+      if (window.scrollY > 100) {
+        nav.classList.add('bg-orange-500/90');
+        nav.classList.remove('bg-orange-500/20');
+      } else {
+        nav.classList.remove('bg-orange-500/90');
+        nav.classList.add('bg-orange-500/20');
+      }
+    });
+  </script>
+</body>
+</html>

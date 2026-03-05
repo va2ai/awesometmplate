@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ config.title }} - Awesome Knowledge Base</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .page-card:hover { transform: translateY(-4px); }
+    .modal-backdrop { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
+    .loading-spin { animation: spin-slow 1s linear infinite; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+  <!-- NAV -->
+  <header class="bg-gray-900 text-white border-b-4 border-black">
+    <nav class="mx-auto max-w-7xl px-6 lg:px-0">
+      <div class="flex h-16 items-center justify-between">
+        <a href="/" class="font-black text-lg tracking-tight">Awesome KB</a>
+        <div class="flex items-center gap-3">
+          <button onclick="toggleTokenPanel()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 text-xs font-bold border border-white/20 transition-colors flex items-center gap-1.5">
+            <iconify-icon icon="ph:coins-bold"></iconify-icon>
+            <span id="navTokenCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- TOKEN PANEL -->
+  <div id="tokenPanel" class="fixed top-14 right-6 z-[60] hidden">
+    <div class="bg-white border-2 border-black shadow-lg w-72">
+      <div class="bg-gray-900 text-white px-4 py-2 border-b-2 border-black flex items-center justify-between">
+        <span class="font-bold text-sm flex items-center gap-1.5">
+          <iconify-icon icon="ph:chart-bar-bold"></iconify-icon> Token Usage
+        </span>
+        <button onclick="toggleTokenPanel()" class="text-gray-400 hover:text-white">
+          <iconify-icon icon="ph:x-bold"></iconify-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-blue-50 border border-blue-200 p-2 text-center">
+            <div class="text-lg font-black text-blue-700">{{ "{:,}".format(tokens.total_input) }}</div>
+            <div class="text-[10px] font-bold text-blue-500 uppercase">Input Tokens</div>
+          </div>
+          <div class="bg-green-50 border border-green-200 p-2 text-center">
+            <div class="text-lg font-black text-green-700">{{ "{:,}".format(tokens.total_output) }}</div>
+            <div class="text-[10px] font-bold text-green-500 uppercase">Output Tokens</div>
+          </div>
+        </div>
+        <div class="bg-orange-50 border border-orange-200 p-2 text-center">
+          <div class="text-xl font-black text-orange-700">${{ "%.4f"|format(tokens.total_cost_usd) }}</div>
+          <div class="text-[10px] font-bold text-orange-500 uppercase">Total Cost ({{ tokens.calls }} calls)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="bg-gray-900 text-white pb-16 pt-12">
+    <div class="max-w-7xl mx-auto text-center px-6">
+      <h1 class="text-5xl md:text-7xl font-black tracking-tighter mb-4">{{ config.title }}</h1>
+      <p class="text-lg text-gray-400 max-w-2xl mx-auto mb-8">{{ config.subtitle }}</p>
+
+      <!-- SINGLE INPUT -->
+      <div class="max-w-2xl mx-auto">
+        <label class="block border-2 border-dashed border-gray-500 hover:border-violet-400 transition-colors cursor-pointer"
+               ondragover="event.preventDefault(); this.classList.add('border-violet-400')"
+               ondragleave="this.classList.remove('border-violet-400')"
+               ondrop="event.preventDefault(); this.classList.remove('border-violet-400'); handleHomeFiles(event.dataTransfer.files)">
+          <div class="flex gap-0">
+            <input id="globalTopic" type="text" placeholder="Topic, URL, or drop files here... AI routes it automatically"
+                   class="flex-1 px-4 py-3 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-violet-400"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault(); doGlobalAdd()}"
+                   onclick="event.stopPropagation()">
+            <button onclick="event.preventDefault(); event.stopPropagation(); doGlobalAdd()" id="globalAddBtn"
+                    class="bg-violet-500 hover:bg-violet-600 text-white px-6 py-3 font-bold text-sm transition-colors flex items-center gap-2">
+              <iconify-icon icon="ph:brain-bold"></iconify-icon> Add
+            </button>
+          </div>
+          <input id="globalFile" type="file" multiple accept=".txt,.md,.json,.csv,.html,.py,.js,.ts,.pdf,.xml,.yaml,.yml,.toml,.log,.rst,.tex" class="hidden" onchange="handleHomeFiles(this.files)">
+        </label>
+
+        <!-- FILE PREVIEW -->
+        <div id="homeFileList" class="mt-2 space-y-1"></div>
+
+        <p class="text-xs text-gray-500 mt-2">Type a topic, paste a URL, or drop files -- Claude routes everything to the right page</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- DROP OVERLAY -->
+  <div id="dropOverlay" class="fixed inset-0 z-[150] hidden pointer-events-none">
+    <div class="absolute inset-0 bg-violet-900/80 flex items-center justify-center">
+      <div class="border-4 border-dashed border-white p-12 text-center">
+        <iconify-icon icon="ph:file-arrow-down-bold" width="64" class="text-white mb-4"></iconify-icon>
+        <p class="text-white font-black text-2xl">Drop files to add</p>
+        <p class="text-violet-200 text-sm mt-2">Claude will route them to the right page</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay" class="fixed inset-0 z-[200] hidden">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="bg-white border-2 border-black p-8 text-center">
+        <iconify-icon icon="ph:circle-notch-bold" width="48" class="loading-spin text-violet-500 mb-4"></iconify-icon>
+        <p class="font-bold text-lg" id="loadingText">Claude is routing your topic...</p>
+        <p class="text-sm text-gray-500 mt-2">This may take a minute</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE CARDS -->
+  <main class="max-w-7xl mx-auto px-6 xl:px-0 -mt-8 flex-1">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for page in config.pages %}
+      <a href="/page/{{ page.slug }}" class="page-card bg-white border-2 border-black hover:shadow-xl transition-all duration-200 group">
+        <div class="bg-{{ page.color }}-500 px-5 py-4 border-b-2 border-black">
+          <div class="flex items-center gap-3">
+            <iconify-icon icon="ph:{{ page.icon.replace('i-ph:', '') }}" width="28" class="text-white"></iconify-icon>
+            <h2 class="text-xl font-black text-white">{{ page.title }}</h2>
+          </div>
+        </div>
+        <div class="p-5">
+          <p class="text-sm text-gray-600 mb-4">{{ page.subtitle }}</p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-400 uppercase">
+              {{ page_stats.get(page.slug, 0) }} sections
+            </span>
+            <span class="text-{{ page.color }}-500 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+              Open <iconify-icon icon="ph:arrow-right-bold"></iconify-icon>
+            </span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t-2 border-black mt-20">
+    <div class="max-w-7xl mx-auto px-6 lg:px-0 py-8">
+      <div class="flex items-center justify-between text-sm text-gray-500">
+        <span>Powered by Claude AI &bull; Built with FastAPI</span>
+        <span>Total Cost: ${{ "%.4f"|format(tokens.total_cost_usd) }} ({{ tokens.calls }} calls)</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    var homeFiles = [];
+    var dragCounter = 0;
+
+    document.addEventListener('dragenter', function(e) {
+      e.preventDefault();
+      dragCounter++;
+      if (dragCounter === 1) {
+        document.getElementById('dropOverlay').classList.remove('hidden');
+      }
+    });
+    document.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter === 0) {
+        document.getElementById('dropOverlay').classList.add('hidden');
+      }
+    });
+    document.addEventListener('dragover', function(e) {
+      e.preventDefault();
+    });
+    document.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dragCounter = 0;
+      document.getElementById('dropOverlay').classList.add('hidden');
+      if (e.dataTransfer.files.length) {
+        handleHomeFiles(e.dataTransfer.files);
+      }
+    });
+
+    function toggleTokenPanel() {
+      document.getElementById('tokenPanel').classList.toggle('hidden');
+    }
+    document.addEventListener('click', function(e) {
+      var panel = document.getElementById('tokenPanel');
+      if (!panel.classList.contains('hidden') && !panel.contains(e.target) && !e.target.closest('[onclick*="toggleTokenPanel"]')) {
+        panel.classList.add('hidden');
+      }
+    });
+
+    function showLoading(text) {
+      document.getElementById('loadingText').textContent = text || 'Claude is working...';
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+    function handleHomeFiles(files) {
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var reader = new FileReader();
+        reader.onload = (function(f) {
+          return function(e) {
+            homeFiles.push({ name: f.name, content: e.target.result, size: f.size });
+            renderHomeFileList();
+          };
+        })(file);
+        reader.readAsText(file);
+      }
+    }
+
+    function removeHomeFile(idx) {
+      homeFiles.splice(idx, 1);
+      renderHomeFileList();
+    }
+
+    function renderHomeFileList() {
+      var list = document.getElementById('homeFileList');
+      while (list.firstChild) list.removeChild(list.firstChild);
+      homeFiles.forEach(function(f, i) {
+        var div = document.createElement('div');
+        div.className = 'flex items-center gap-2 bg-gray-800 border border-gray-600 px-3 py-1.5 text-xs text-white';
+
+        var icon = document.createElement('iconify-icon');
+        icon.setAttribute('icon', 'ph:file-text-bold');
+        icon.className = 'text-gray-400';
+        div.appendChild(icon);
+
+        var name = document.createElement('span');
+        name.className = 'flex-1 font-bold truncate';
+        name.textContent = f.name;
+        div.appendChild(name);
+
+        var size = document.createElement('span');
+        size.className = 'text-gray-400';
+        size.textContent = (f.size / 1024).toFixed(1) + ' KB';
+        div.appendChild(size);
+
+        var btn = document.createElement('button');
+        btn.className = 'text-red-400 hover:text-red-300 font-bold';
+        btn.textContent = 'X';
+        btn.onclick = (function(idx) { return function() { removeHomeFile(idx); }; })(i);
+        div.appendChild(btn);
+
+        list.appendChild(div);
+      });
+    }
+
+    function isUrl(str) {
+      return /^https?:\/\//i.test(str);
+    }
+
+    async function doGlobalAdd() {
+      var input = document.getElementById('globalTopic').value.trim();
+
+      if (!input && !homeFiles.length) return;
+
+      var topic = '';
+      var url = '';
+
+      if (isUrl(input)) {
+        url = input;
+        topic = input;
+      } else {
+        topic = input || (homeFiles.length ? homeFiles[0].name : '');
+      }
+
+      var btn = document.getElementById('globalAddBtn');
+      btn.disabled = true;
+      showLoading('Claude is routing "' + (topic || 'files') + '" to the right page...');
+
+      try {
+        var payload = { topic: topic };
+        if (url) payload.url = url;
+        if (homeFiles.length) {
+          payload.files = homeFiles.map(function(f) { return { name: f.name, content: f.content }; });
+        }
+        var res = await fetch('/api/add-topic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        window.location.href = '/page/' + data.slug;
+      } catch (e) {
+        hideLoading();
+        btn.disabled = false;
+        alert('Error: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

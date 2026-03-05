@@ -1,0 +1,110 @@
+import json
+
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+
+from app.routes.home import get_page_directory, get_page_or_404, save_page_directory
+from app.services.block_creator import load_custom_blocks
+from app.tools.token_tracker import load_token_usage
+from app.agents import organize_with_claude, smart_add_with_claude
+
+router = APIRouter()
+
+
+@router.get("/page/{slug}", response_class=HTMLResponse)
+async def page_view(request: Request, slug: str):
+    page = get_page_or_404(slug)
+    if not page:
+        return HTMLResponse("Page not found", status_code=404)
+    directory = get_page_directory(slug)
+    tokens = load_token_usage()
+    from app.routes.home import load_site_config
+    config = load_site_config()
+    custom_blocks = {b["type_name"]: b for b in load_custom_blocks()}
+    from app import templates
+    return templates.TemplateResponse(
+        "page.html", {"request": request, "page": page, "directory": directory, "tokens": tokens, "config": config, "custom_blocks": custom_blocks}
+    )
+
+
+@router.get("/api/page/{slug}")
+async def get_page_data(slug: str):
+    return get_page_directory(slug).model_dump()
+
+
+@router.post("/api/page/{slug}/research")
+async def research_topic(slug: str, req: Request):
+    page = get_page_or_404(slug)
+    if not page:
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    try:
+        body = await req.json()
+        topic = body.get("topic", "")
+        instructions = body.get("instructions", "")
+        urls = body.get("urls", [])
+        files = body.get("files", [])
+        directory = await organize_with_claude(
+            topic=topic, instructions=instructions, urls=urls, files=files,
+        )
+        save_page_directory(slug, directory)
+        return {"status": "ok", "directory": directory.model_dump()}
+    except Exception as e:
+        import traceback
+        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+
+
+@router.post("/api/page/{slug}/smart-add")
+async def smart_add(slug: str, request: Request):
+    page = get_page_or_404(slug)
+    if not page:
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    try:
+        body = await request.json()
+        topic = body.get("topic", "")
+        description = body.get("description", "")
+
+        if not topic:
+            return JSONResponse(status_code=400, content={"error": "Topic is required"})
+
+        directory = get_page_directory(slug)
+
+        if not directory.sections:
+            new_dir = await organize_with_claude(topic=topic, instructions=description)
+        else:
+            new_dir = await smart_add_with_claude(directory, topic, description)
+
+        save_page_directory(slug, new_dir)
+        return {"status": "ok", "directory": new_dir.model_dump()}
+    except Exception as e:
+        import traceback
+        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+
+
+@router.post("/api/page/{slug}/organize")
+async def organize_existing(slug: str, request: Request):
+    page = get_page_or_404(slug)
+    if not page:
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    try:
+        body = await request.json()
+        directory = get_page_directory(slug)
+        instructions = body.get("instructions", "Reorganize and improve this directory")
+        existing_json = json.dumps(directory.model_dump(), indent=2)
+        new_directory = await organize_with_claude(
+            topic=directory.title,
+            instructions=f"Reorganize this existing directory:\n{existing_json}\n\nInstructions: {instructions}",
+        )
+        save_page_directory(slug, new_directory)
+        return {"status": "ok", "directory": new_directory.model_dump()}
+    except Exception as e:
+        import traceback
+        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+
+
+@router.delete("/api/page/{slug}")
+async def clear_page(slug: str):
+    from app.config import PAGES_DIR
+    filepath = PAGES_DIR / f"{slug}.json"
+    if filepath.exists():
+        filepath.unlink()
+    return {"status": "ok"}

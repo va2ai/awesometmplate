@@ -1,0 +1,11 @@
+data/
+__pycache__/
+*.pyc
+.env
+.venv/
+*.egg-info/
+dist/
+build/
+.claude/
+ideation-kb-architecture-*/
+research/
