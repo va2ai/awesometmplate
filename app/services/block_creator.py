@@ -89,7 +89,7 @@ def get_all_block_type_names() -> list[str]:
         "link_list", "code_grid", "info_grid", "comparison", "stats",
         "steps", "tip", "text", "table", "faq", "timeline", "alert",
         "badges", "checklist", "quote", "key_value", "chart",
-        "progress", "accordion", "tabs",
+        "progress", "accordion", "tabs", "animated_cards",
     ]
     custom = [b["type_name"] for b in load_custom_blocks()]
     return builtin + custom
@@ -178,6 +178,8 @@ The HTML template must:
 - Include Phosphor icons via <iconify-icon icon="ph:icon-name-bold">
 - Add hover effects, transitions (transition-all duration-200), and visual polish
 - Consider using CSS grid or flexbox for interesting layouts
+- You can use anime.js (loaded globally) for entrance animations: anime({targets: '.my-class', translateY: [30, 0], opacity: [0, 1], delay: anime.stagger(80), easing: 'easeOutQuart'})
+- Wrap anime.js calls in IntersectionObserver so they trigger on scroll-into-view
 
 Make the block feel SPECIAL -- it should be obvious this isn't a generic component. Add visual details like decorative borders, icon accents, color-coded elements, or creative spacing.
 

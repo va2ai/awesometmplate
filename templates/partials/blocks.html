@@ -394,6 +394,86 @@
     {% endfor %}
   </div>
 
+  {# ANIMATED CARDS #}
+  {% elif block.type == "animated_cards" %}
+  {% set anim_id = "anim-" ~ section_loop_idx ~ "-" ~ loop.index0 %}
+  {% set animation = block.content.get("animation", "stagger-up") %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" id="{{ anim_id }}">
+    {% for card in block.content.get("cards", []) %}
+    {% set card_color = card.get("color", section.color or "orange") %}
+    <div class="anim-card bg-white border-2 border-black overflow-hidden opacity-0 translate-y-4
+                hover:shadow-xl transition-shadow duration-300 cursor-default
+                {% if animation == 'flip' %}[perspective:800px]{% endif %}">
+      {% if card.get("image_gradient") %}
+      <div class="h-24 bg-gradient-to-br from-{{ card_color }}-400 to-{{ card_color }}-600 flex items-center justify-center border-b-2 border-black">
+        {% if card.get("icon") %}
+        <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="40" class="text-white/80"></iconify-icon>
+        {% endif %}
+        {% if card.get("badge") %}
+        <span class="absolute top-2 right-2 bg-black/30 text-white text-[10px] font-bold px-2 py-0.5 backdrop-blur-sm">{{ card.get("badge") }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="p-4 relative">
+        {% if card.get("icon") and not card.get("image_gradient") %}
+        <div class="w-10 h-10 bg-{{ card_color }}-100 border-2 border-{{ card_color }}-300 flex items-center justify-center mb-3">
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-{{ card_color }}-600"></iconify-icon>
+        </div>
+        {% endif %}
+        <h3 class="text-sm font-black text-gray-900 mb-1">{{ card.get("title", "") }}</h3>
+        {% if card.get("subtitle") %}
+        <p class="text-[11px] font-bold text-{{ card_color }}-600 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+        {% endif %}
+        {% if card.get("description") %}
+        <p class="text-xs text-gray-600 leading-relaxed">{{ card.get("description", "") }}</p>
+        {% endif %}
+        {% if card.get("stats") %}
+        <div class="flex gap-3 mt-3 pt-3 border-t border-gray-100">
+          {% for stat in card.get("stats", []) %}
+          <div class="text-center flex-1">
+            <div class="text-sm font-black text-{{ card_color }}-600">{{ stat.get("value", "") }}</div>
+            <div class="text-[10px] text-gray-500">{{ stat.get("label", "") }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.get("tags") %}
+        <div class="flex flex-wrap gap-1 mt-3">
+          {% for tag in card.get("tags", []) %}
+          <span class="text-[10px] font-bold bg-{{ card_color }}-100 text-{{ card_color }}-700 px-1.5 py-0.5">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <script>
+  (function(){
+    var el = document.getElementById('{{ anim_id }}');
+    var cards = el.querySelectorAll('.anim-card');
+    var anim = '{{ animation }}';
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (!entry.isIntersecting) return;
+        obs.unobserve(entry.target);
+        if (anim === 'flip') {
+          anime({ targets: cards, rotateY: [90, 0], opacity: [0, 1], duration: 800, delay: anime.stagger(120), easing: 'easeOutExpo' });
+        } else if (anim === 'scale-bounce') {
+          anime({ targets: cards, scale: [0.3, 1], opacity: [0, 1], duration: 600, delay: anime.stagger(100), easing: 'easeOutBack' });
+        } else if (anim === 'slide-left') {
+          anime({ targets: cards, translateX: [80, 0], opacity: [0, 1], duration: 700, delay: anime.stagger(100), easing: 'easeOutQuart' });
+        } else if (anim === 'fade-scale') {
+          anime({ targets: cards, scale: [0.8, 1], opacity: [0, 1], duration: 500, delay: anime.stagger(80), easing: 'easeOutCubic' });
+        } else {
+          anime({ targets: cards, translateY: [40, 0], opacity: [0, 1], duration: 600, delay: anime.stagger(100), easing: 'easeOutQuart' });
+        }
+      });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  })();
+  </script>
+
   {# CUSTOM BLOCKS #}
   {% elif custom_blocks is defined and block.type in custom_blocks %}
   {{ render_custom_block(custom_blocks[block.type].html_template, block, section) }}

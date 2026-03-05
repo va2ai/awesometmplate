@@ -41,6 +41,11 @@ BLOCK TYPES (choose the most creative fit):
 - progress: For animated progress/completion bars. Content has "items" array with "label", "value" (current number), "max" (max number), "color" (Tailwind color). Great for skill levels, completion rates, survey results, market share. Use creatively for any ranked/scored data.
 - accordion: For collapsible FAQ-style or detail sections. Content has "items" array with "title" and "content". Use when content is long and users want to expand/collapse sections.
 - tabs: For tabbed content panels. Content has "tabs" array with "label" and "content". Use when showing multiple related views of the same topic (e.g., different languages, OS-specific instructions, before/after).
+- animated_cards: For visually striking card grids with entrance animations powered by anime.js. Content has "animation" (one of: "stagger-up", "flip", "scale-bounce", "slide-left", "fade-scale") and "cards" array. Each card can have: "title" (required), "description", "icon" (Phosphor icon name), "subtitle" (small colored label), "color" (Tailwind color override), "image_gradient" (true for a colored header banner), "badge" (overlay text on gradient), "stats" (array of {value, label} for mini metrics at bottom), "tags" (array of tag strings). USE THIS when content deserves a dramatic visual entrance -- product showcases, team profiles, feature highlights, tool comparisons, award winners, portfolio items. Pick the animation that fits: "flip" for reveals/surprises, "scale-bounce" for playful/fun content, "slide-left" for sequential/process items, "stagger-up" for general use, "fade-scale" for elegant/subtle.
+
+AVAILABLE JS LIBRARIES (loaded via CDN, use freely in custom blocks):
+- anime.js (v3.2.2): Powerful animation library. Use anime({targets, translateY, opacity, scale, rotateY, delay: anime.stagger(100), duration, easing}) for entrance animations, hover effects, and interactive transitions. Easing options: 'easeOutQuart', 'easeOutExpo', 'easeOutBack', 'easeOutBounce', 'easeOutElastic'.
+- Chart.js (v4): For data visualization (already used by chart block type).
 
 IMPORTANT: Only use code_grid when the content is ACTUAL CODE (programming languages, shell commands, config files). For legal text, descriptions, definitions, or any non-code content use info_grid, text, table, or other appropriate types instead.
 
