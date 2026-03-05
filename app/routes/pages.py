@@ -93,16 +93,16 @@ async def add_topic(slug: str, req: Request):
         files = body.get("files", [])
         message = body.get("message", "").strip()
 
-        if not topic and not message:
-            return JSONResponse(status_code=400, content={"error": "Topic or message is required"})
+        if not topic and not message and not urls and not files:
+            return JSONResponse(status_code=400, content={"error": "Topic, message, URL, or file is required"})
 
-        display_topic = topic or message[:80]
+        display_topic = topic or message[:80] or (files[0]["name"] if files else "Research")
         job_id = create_job("add-topic", slug=slug, topic=display_topic)
 
         async def _work():
             import re
-            input_text = message or topic
-            found_urls = re.findall(r'https?://[^\s<>"\']+', input_text)
+            input_text = message or topic or (files[0]["name"] if files else "Research")
+            found_urls = re.findall(r'https?://[^\s<>"\']+', message or topic or "")
             all_urls = list(dict.fromkeys(urls + found_urls))
 
             instructions = description or ""
