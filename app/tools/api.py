@@ -99,8 +99,18 @@ async def call_tool(
         try:
             result = json.loads(text)
         except json.JSONDecodeError as e:
-            logger.error("Failed to parse Gemini JSON: %s\nRaw: %s", e, text[:500])
-            raise RuntimeError(f"Failed to parse Gemini JSON response: {e}")
+            # Try to extract the first valid JSON object if there's trailing data
+            if "Extra data" in str(e):
+                decoder = json.JSONDecoder()
+                try:
+                    result, _ = decoder.raw_decode(text)
+                    logger.warning("Gemini returned extra data after JSON, extracted first object")
+                except json.JSONDecodeError:
+                    logger.error("Failed to parse Gemini JSON: %s\nRaw: %s", e, text[:500])
+                    raise RuntimeError(f"Failed to parse Gemini JSON response: {e}")
+            else:
+                logger.error("Failed to parse Gemini JSON: %s\nRaw: %s", e, text[:500])
+                raise RuntimeError(f"Failed to parse Gemini JSON response: {e}")
 
         result["_tokens"] = token_info
         return result
