@@ -1,5 +1,6 @@
-"""Low-level Claude API caller. The single point of contact with Anthropic."""
+"""Low-level Gemini API caller. The single point of contact with Google AI."""
 
+import json
 import logging
 import os
 
@@ -11,7 +12,13 @@ from app.tools.token_tracker import record_tokens
 
 logger = logging.getLogger(__name__)
 
-API_URL = "https://api.anthropic.com/v1/messages"
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+
+# Map old Claude model names to Gemini models
+MODEL_MAP = {
+    "claude-sonnet-4-6": "gemini-3.1-flash-lite-preview",
+    "claude-haiku-4-5-20251001": "gemini-3.1-flash-lite-preview",
+}
 
 
 async def call_tool(
@@ -22,53 +29,74 @@ async def call_tool(
     model: str = "claude-sonnet-4-6",
     max_tokens: int = 16384,
 ) -> dict:
-    """Call Claude API with tool_use structured output. Returns the tool input dict."""
+    """Call Gemini API with JSON structured output. Returns the parsed dict."""
     load_dotenv(override=True)
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("GEMINI_API_KEY", "")
 
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
+    gemini_model = MODEL_MAP.get(model, "gemini-2.5-flash")
+    url = f"{API_URL}/{gemini_model}:generateContent?key={api_key}"
+
+    # Build schema instruction from the tool schema description
+    schema_hint = json.dumps(tool_schema, indent=2)
 
     payload = {
-        "model": model,
-        "max_tokens": max_tokens,
-        "system": system,
-        "tools": [
-            {
-                "name": tool_name,
-                "description": "Produce structured output",
-                "input_schema": tool_schema,
-            }
+        "contents": [
+            {"role": "user", "parts": [{"text": user_message + "\n\nRespond with JSON matching this schema:\n" + schema_hint}]}
         ],
-        "tool_choice": {"type": "tool", "name": tool_name},
-        "messages": [{"role": "user", "content": user_message}],
+        "systemInstruction": {
+            "parts": [{"text": system}]
+        },
+        "generationConfig": {
+            "maxOutputTokens": max_tokens,
+            "responseMimeType": "application/json",
+            "thinkingConfig": {"thinkingLevel": "HIGH"},
+        },
     }
 
-    logger.info("Claude API call: model=%s tool=%s", model, tool_name)
+    logger.info("Gemini API call: model=%s tool=%s", gemini_model, tool_name)
 
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
-        resp = await client.post(API_URL, headers=headers, json=payload)
+        resp = await client.post(url, json=payload)
         if resp.status_code != 200:
-            logger.error("Claude API error: %d", resp.status_code)
-            raise RuntimeError(f"Anthropic API {resp.status_code}")
+            logger.error("Gemini API error: %d body=%s", resp.status_code, resp.text[:1000])
+            raise RuntimeError(f"Gemini API {resp.status_code}: {resp.text[:500]}")
         data = resp.json()
 
-        usage = data.get("usage", {})
-        input_t = usage.get("input_tokens", 0)
-        output_t = usage.get("output_tokens", 0)
+        # Extract token usage
+        usage_meta = data.get("usageMetadata", {})
+        input_t = usage_meta.get("promptTokenCount", 0)
+        output_t = usage_meta.get("candidatesTokenCount", 0)
         token_info = record_tokens(input_t, output_t, model)
 
         logger.info(
-            "Claude API response: model=%s in=%d out=%d cost=$%.4f",
-            model, input_t, output_t, token_info["cost_usd"],
+            "Gemini API response: model=%s in=%d out=%d cost=$%.4f",
+            gemini_model, input_t, output_t, token_info["cost_usd"],
         )
 
-        for block in data.get("content", []):
-            if block.get("type") == "tool_use":
-                result = block["input"]
-                result["_tokens"] = token_info
-                return result
-        raise RuntimeError("No tool_use block in response")
+        # Parse JSON from response text
+        candidates = data.get("candidates", [])
+        if not candidates:
+            raise RuntimeError("No candidates in Gemini response")
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        if not parts:
+            raise RuntimeError("No parts in Gemini response")
+
+        # With thinking enabled, response has multiple parts:
+        # thinking parts (thought=True) + the actual text part
+        # Find the last non-thought part with text content
+        text = ""
+        for part in reversed(parts):
+            if part.get("thought"):
+                continue
+            if part.get("text"):
+                text = part["text"]
+                break
+        try:
+            result = json.loads(text)
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse Gemini JSON: %s\nRaw: %s", e, text[:500])
+            raise RuntimeError(f"Failed to parse Gemini JSON response: {e}")
+
+        result["_tokens"] = token_info
+        return result

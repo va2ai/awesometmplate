@@ -113,11 +113,18 @@
         <h2 class="text-xl font-black flex items-center gap-2">
           <iconify-icon icon="ph:{{ section.icon_class.replace('i-ph:', '') if section.icon_class else 'folder-bold' }}"></iconify-icon>
           {{ section.title }}
-          {% if section.stars %}
-          <span class="ml-auto bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
-            <iconify-icon icon="ph:star-fill"></iconify-icon> {{ section.stars }}
+          <span class="ml-auto flex items-center gap-2">
+            {% if section.stars %}
+            <span class="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+              <iconify-icon icon="ph:star-fill"></iconify-icon> {{ section.stars }}
+            </span>
+            {% endif %}
+            <button onclick="expandSection('{{ section.title | replace(\"'\", \"\") }}')"
+                    class="bg-white/20 hover:bg-white/30 active:bg-white/40 px-2.5 py-0.5 text-xs font-bold flex items-center gap-1 transition-colors"
+                    title="Expand this section with more detail">
+              <iconify-icon icon="ph:arrows-out-bold" width="14"></iconify-icon> Expand
+            </button>
           </span>
-          {% endif %}
         </h2>
       </div>
 
@@ -272,6 +279,19 @@
         div.appendChild(icon); div.appendChild(name); div.appendChild(size); div.appendChild(removeBtn);
         list.appendChild(div);
       });
+    }
+
+    async function expandSection(sectionTitle) {
+      try {
+        var res = await fetch('/api/page/' + PAGE_SLUG + '/' + TOPIC_SLUG + '/smart-add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: 'Expand on: ' + sectionTitle, description: 'Add more depth and detail to the "' + sectionTitle + '" section with additional blocks covering subtopics, examples, and insights not yet covered.' })
+        });
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        addJob(data.jobId, 'Expanding: ' + sectionTitle);
+      } catch (e) { /* toast handles errors */ }
     }
 
     async function doAddContent() {

@@ -8,4 +8,4 @@ python-multipart==0.0.20
 aiofiles==24.1.0
 pydantic==2.10.4
 python-dotenv==1.0.1
-exa-py==1.8.7
+exa-py>=1.15.0

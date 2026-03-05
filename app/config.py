@@ -37,8 +37,9 @@ JOBS_DIR.mkdir(exist_ok=True)
 
 # Pricing per million tokens
 PRICING = {
-    "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
-    "claude-haiku-4-5-20251001": {"input": 0.80, "output": 4.0},
+    "claude-sonnet-4-6": {"input": 0.25, "output": 1.50},
+    "claude-haiku-4-5-20251001": {"input": 0.25, "output": 1.50},
+    "gemini-3.1-flash-lite-preview": {"input": 0.25, "output": 1.50},
 }
 
 
@@ -46,8 +47,8 @@ def validate_env():
     """Validate required env vars at startup. Warns in dev, exits in prod."""
     logger = logging.getLogger(__name__)
     missing = []
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        missing.append("ANTHROPIC_API_KEY")
+    if not os.getenv("GEMINI_API_KEY"):
+        missing.append("GEMINI_API_KEY")
 
     if missing:
         msg = f"Missing required env vars: {', '.join(missing)}"

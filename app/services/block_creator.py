@@ -124,27 +124,18 @@ async def check_needs_new_block(topic: str, content_context: str) -> dict:
     all_types = get_all_block_type_names()
     type_list = ", ".join(all_types)
 
-    system = f"""You evaluate whether content can be displayed using existing block types.
+    system = f"""You evaluate whether content could benefit from a custom block type for better visual presentation.
 
 Available block types: {type_list}
 
-Built-in types handle:
-- code_grid: code snippets, install commands
-- link_list: URL collections
-- info_grid: feature cards with icons
-- comparison: pros/cons, side-by-side
-- stats: numerical metrics
-- steps: sequential tutorials
-- tip: single important note
-- text: paragraphs
-- table: rows and columns of data
-- faq: question/answer pairs
-- timeline: chronological events
-- alert: warnings/notices with severity
-- badges: colored tags/labels
-- checklist: task lists with checkboxes
+Built-in types handle standard layouts: code snippets, links, feature cards, comparisons, stats, steps, tips, text, tables, FAQs, timelines, alerts, badges, checklists, quotes, key-value pairs, charts, progress bars, accordions, tabs.
 
-Only say needs_new_type=true if the content GENUINELY cannot be represented by ANY existing type. Most content fits existing types."""
+Say needs_new_type=true when:
+- The content has a unique structure that would look SIGNIFICANTLY better with a custom layout (e.g., rating systems with stars, scoreboards, recipe cards, skill trees, org charts, pricing tables, kanban boards, flashcards, before/after sliders, leaderboards)
+- A custom block would make the content more interactive, visual, or engaging than any existing type
+- The content represents a well-known UI pattern not covered by existing types
+
+Lean toward creativity -- if a custom block would make the page more visually interesting and unique, go for it."""
 
     user_msg = f"""Topic: {topic}
 Content context: {content_context}
@@ -173,17 +164,22 @@ async def create_new_block_type(content_description: str) -> dict:
         for b in existing:
             existing_info += f"- {b['type_name']}: {b['description']}\n"
 
-    system = f"""You are a block type designer for a neo-brutalist knowledge base UI.
+    system = f"""You are an inventive block type designer for a neo-brutalist knowledge base UI. You create VISUALLY STUNNING custom blocks that make pages feel unique and delightful.
 
-Design a new block type that handles content that doesn't fit existing types.
+Design a new block type that creates a memorable visual experience. Think beyond basic layouts -- create blocks that feel like custom-designed UI components.
+
 The HTML template must:
-- Use Tailwind CSS classes
-- Follow neo-brutalist style: border-2 border-black, bold colors, font-bold, hover:shadow-lg
-- Use {{{{ section.color }}}} for theme color (e.g. bg-{{{{ section.color }}}}-500)
+- Use Tailwind CSS classes with creative combinations (gradients via bg-gradient-to-r, shadows, rounded corners, transforms)
+- Follow neo-brutalist style: border-2 border-black, bold colors, font-bold, hover:shadow-lg, but push the boundaries with creative flourishes
+- Use {{{{ section.color }}}} for theme color (e.g. bg-{{{{ section.color }}}}-500, bg-{{{{ section.color }}}}-100)
 - Access data via block.content (e.g. block.content.get("items", []))
 - Use Jinja2 template syntax (for loops, if statements)
 - Be wrapped in a div with class "mb-6"
 - Include Phosphor icons via <iconify-icon icon="ph:icon-name-bold">
+- Add hover effects, transitions (transition-all duration-200), and visual polish
+- Consider using CSS grid or flexbox for interesting layouts
+
+Make the block feel SPECIAL -- it should be obvious this isn't a generic component. Add visual details like decorative borders, icon accents, color-coded elements, or creative spacing.
 
 Do NOT create types that duplicate existing ones.
 Use snake_case for type_name.
