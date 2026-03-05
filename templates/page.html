@@ -37,6 +37,9 @@
     @media (hover: none) { .page-card:active { transform: scale(0.98); } }
     /* Mobile bottom bar */
     .mobile-action-bar { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+    /* Scroll reveal */
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
@@ -184,6 +187,7 @@
   <!-- MAIN CONTENT -->
   <main class="max-w-7xl mx-auto px-3 sm:px-6 xl:px-0 py-6 sm:py-8 pb-20 sm:pb-8 relative flex-1">
     {% for section in directory.sections %}
+    {% set section_loop_idx = loop.index0 %}
     <div id="section-{{ loop.index0 }}" class="mb-12 relative z-10">
 
       <!-- SECTION HEADER -->
@@ -215,6 +219,7 @@
 
       <!-- BLOCKS -->
       {% for block in section.blocks %}
+      <div class="reveal">
 
         <!-- BLOCK LABEL -->
         {% if block.label %}
@@ -523,11 +528,101 @@
           {% endfor %}
         </div>
 
+        <!-- CHART (Chart.js) -->
+        {% elif block.type == "chart" %}
+        <div class="bg-white border-2 border-black mb-6 p-4">
+          <canvas id="chart-{{ section_loop_idx }}-{{ loop.index0 }}" class="w-full" style="max-height:300px;"></canvas>
+          <script>
+          (function(){
+            var ctx = document.getElementById('chart-{{ section_loop_idx }}-{{ loop.index0 }}');
+            var colorMap = {blue:'59,130,246',red:'239,68,68',green:'34,197,94',orange:'249,115,22',violet:'139,92,246',pink:'236,72,153',yellow:'234,179,8',indigo:'99,102,241'};
+            var datasets = [];
+            {% for ds in block.content.get("datasets", []) %}
+            (function(){
+              var c = colorMap['{{ ds.get("color","blue") }}'] || '59,130,246';
+              datasets.push({
+                label: '{{ ds.get("label","") }}',
+                data: {{ ds.get("data",[])|tojson }},
+                backgroundColor: '{{ block.content.get("type","bar") }}' === 'line' ? 'rgba('+c+',0.1)' : {{ ds.get("data",[])|tojson }}.map(function(_,i){var colors=[c,'239,68,68','34,197,94','249,115,22','139,92,246','236,72,153'];return 'rgba('+(colors[i%colors.length]||c)+',0.8)';}),
+                borderColor: 'rgb('+c+')',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: '{{ block.content.get("type","bar") }}' === 'line'
+              });
+            })();
+            {% endfor %}
+            new Chart(ctx, {
+              type: '{{ block.content.get("type","bar") }}',
+              data: { labels: {{ block.content.get("labels",[])|tojson }}, datasets: datasets },
+              options: {
+                responsive: true,
+                animation: { duration: 1200, easing: 'easeOutQuart' },
+                plugins: { title: { display: {{ 'true' if block.content.get('title') else 'false' }}, text: '{{ block.content.get("title","") }}', font: {weight:'bold',size:14} }, legend: { display: datasets.length > 1 } },
+                scales: '{{ block.content.get("type","bar") }}' === 'pie' || '{{ block.content.get("type","bar") }}' === 'doughnut' ? {} : { y: { beginAtZero: true } }
+              }
+            });
+          })();
+          </script>
+        </div>
+
+        <!-- PROGRESS BARS (animated) -->
+        {% elif block.type == "progress" %}
+        <div class="bg-white border-2 border-black mb-6 p-4 space-y-3">
+          {% for item in block.content.get("items", []) %}
+          {% set pct = (item.get("value",0) / item.get("max",100) * 100)|round|int %}
+          {% set color = item.get("color", "blue") %}
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-xs font-bold text-gray-800">{{ item.get("label","") }}</span>
+              <span class="text-xs font-bold text-{{ color }}-600">{{ item.get("value",0) }}/{{ item.get("max",100) }}</span>
+            </div>
+            <div class="w-full bg-gray-200 h-3 border border-black overflow-hidden">
+              <div class="progress-bar h-full bg-{{ color }}-500 transition-all duration-1000 ease-out" style="width:0%;" data-width="{{ pct }}%"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- ACCORDION (collapsible) -->
+        {% elif block.type == "accordion" %}
+        <div class="bg-white border-2 border-black mb-6 divide-y divide-gray-200">
+          {% for item in block.content.get("items", []) %}
+          <details class="group">
+            <summary class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors select-none">
+              <span class="text-sm font-bold text-gray-900">{{ item.get("title","") }}</span>
+              <iconify-icon icon="ph:caret-down-bold" width="14" class="text-gray-400 group-open:rotate-180 transition-transform duration-200"></iconify-icon>
+            </summary>
+            <div class="px-4 pb-3 text-sm text-gray-600 leading-relaxed">{{ item.get("content","") }}</div>
+          </details>
+          {% endfor %}
+        </div>
+
+        <!-- TABS (interactive) -->
+        {% elif block.type == "tabs" %}
+        {% set tabs_id = "tabs-" ~ section_loop_idx ~ "-" ~ loop.index0 %}
+        <div class="bg-white border-2 border-black mb-6" id="{{ tabs_id }}">
+          <div class="flex border-b-2 border-black overflow-x-auto">
+            {% for tab in block.content.get("tabs", []) %}
+            <button onclick="switchTab('{{ tabs_id }}', {{ loop.index0 }})"
+                    class="tab-btn px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors border-r border-gray-200 last:border-r-0 {% if loop.first %}bg-{{ section.color }}-500 text-white{% else %}text-gray-600 hover:bg-gray-50{% endif %}"
+                    data-idx="{{ loop.index0 }}">
+              {{ tab.get("label","") }}
+            </button>
+            {% endfor %}
+          </div>
+          {% for tab in block.content.get("tabs", []) %}
+          <div class="tab-panel p-4 text-sm text-gray-700 leading-relaxed {% if not loop.first %}hidden{% endif %}" data-idx="{{ loop.index0 }}">
+            {{ tab.get("content","") }}
+          </div>
+          {% endfor %}
+        </div>
+
         <!-- CUSTOM BLOCK TYPES (from block creator agent) -->
         {% elif custom_blocks is defined and block.type in custom_blocks %}
         {{ render_custom_block(custom_blocks[block.type].html_template, block, section) }}
 
         {% endif %}
+      </div><!-- /reveal -->
       {% endfor %}
 
       <!-- Fallback: old-style detail_cards if present -->
@@ -718,6 +813,38 @@
     function toggleHamburger() {
       document.getElementById('hamburgerMenu').classList.toggle('hidden');
     }
+
+    // Tab switching
+    function switchTab(containerId, idx) {
+      var container = document.getElementById(containerId);
+      container.querySelectorAll('.tab-btn').forEach(function(btn) {
+        if (parseInt(btn.dataset.idx) === idx) {
+          btn.className = btn.className.replace(/text-gray-600 hover:bg-gray-50/g, '').replace(/bg-\w+-500 text-white/g, '') + ' bg-{{ page.color }}-500 text-white';
+        } else {
+          btn.className = btn.className.replace(/bg-\w+-500 text-white/g, '') + ' text-gray-600 hover:bg-gray-50';
+        }
+      });
+      container.querySelectorAll('.tab-panel').forEach(function(panel) {
+        panel.classList.toggle('hidden', parseInt(panel.dataset.idx) !== idx);
+      });
+    }
+
+    // Scroll reveal + progress bar animation
+    (function() {
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            // Animate progress bars inside
+            entry.target.querySelectorAll('.progress-bar').forEach(function(bar) {
+              bar.style.width = bar.dataset.width;
+            });
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+    })();
 
     function toggleTokenPanel() {
       var panel = document.getElementById('tokenPanel');

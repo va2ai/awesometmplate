@@ -20,6 +20,10 @@ DYNAMICALLY choose the best block types to present each section's content:
 - checklist: For task lists, requirements, action items. Items with text. ALWAYS set checked=false -- users check boxes themselves.
 - quote: For citations, legal references, expert opinions, testimonials. Content has "text" (the quote), "attribution" (who said it), and optional "source" (where from).
 - key_value: For structured label-value pairs like case details, specifications, metadata. Content has "items" array with "key" and "value" fields.
+- chart: For data visualization -- bar charts, pie charts, line graphs, doughnut charts. Content has "type" ('bar'|'pie'|'line'|'doughnut'), "title" (chart title), "labels" (x-axis labels array), "datasets" (array of {label, data: [numbers], color}). Use for statistics, comparisons, distributions, trends. Colors: use Tailwind color names like 'blue', 'red', 'green', 'orange', 'violet', 'pink'.
+- progress: For animated progress/completion bars. Content has "items" array with "label", "value" (current number), "max" (max number), "color" (Tailwind color). Great for skill levels, completion rates, survey results, market share.
+- accordion: For collapsible FAQ-style or detail sections. Content has "items" array with "title" and "content". Use when content is long and users want to expand/collapse sections.
+- tabs: For tabbed content panels. Content has "tabs" array with "label" and "content". Use when showing multiple related views of the same topic (e.g., different languages, OS-specific instructions, before/after).
 
 IMPORTANT: Only use code_grid when the content is ACTUAL CODE (programming languages, shell commands, config files). For legal text, descriptions, definitions, or any non-code content use info_grid, text, table, or other appropriate types instead.
 

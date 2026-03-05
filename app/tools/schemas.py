@@ -31,7 +31,8 @@ DIRECTORY_SCHEMA = {
                                         "link_list", "code_grid", "info_grid", "comparison",
                                         "stats", "steps", "tip", "text", "table", "faq",
                                         "timeline", "alert", "badges", "checklist",
-                                        "quote", "key_value",
+                                        "quote", "key_value", "chart", "progress",
+                                        "accordion", "tabs",
                                     ],
                                     "description": "Block layout type",
                                 },
@@ -54,7 +55,11 @@ DIRECTORY_SCHEMA = {
                                     "badges: {items: [{label, color}]}. "
                                     "checklist: {items: [{text, checked: bool}]}. "
                                     "quote: {text: str, attribution: str, source: str}. "
-                                    "key_value: {items: [{key: str, value: str}]}.",
+                                    "key_value: {items: [{key: str, value: str}]}. "
+                                    "chart: {type: 'bar'|'pie'|'line'|'doughnut', title: str, labels: [str], datasets: [{label: str, data: [number], color: str}]}. "
+                                    "progress: {items: [{label: str, value: number, max: number, color: str}]}. "
+                                    "accordion: {items: [{title: str, content: str}]}. "
+                                    "tabs: {tabs: [{label: str, content: str}]}.",
                                 },
                             },
                             "required": ["type", "content"],
