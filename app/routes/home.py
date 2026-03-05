@@ -100,11 +100,25 @@ async def add_topic_global(request: Request):
             directory = get_page_directory(slug)
             urls = [url] if url else []
 
-            if not directory.sections or urls or files:
+            if not directory.sections:
+                # Empty page: generate fresh
                 new_dir = await organize_with_claude(
                     topic=topic, instructions=description, urls=urls, files=files,
                 )
+            elif urls or files:
+                # Has content + new sources: research then merge
+                researched = await organize_with_claude(
+                    topic=topic, instructions=description, urls=urls, files=files,
+                )
+                merged = directory.model_dump()
+                existing_titles = {s.title.lower() for s in directory.sections}
+                for section in researched.model_dump()["sections"]:
+                    if section["title"].lower() not in existing_titles:
+                        merged["sections"].append(section)
+                from app.models import Directory as DirModel
+                new_dir = DirModel(**merged)
             else:
+                # Has content + plain topic: smart add
                 new_dir = await smart_add_with_claude(directory, topic, description)
 
             save_page_directory(slug, new_dir)

@@ -48,9 +48,31 @@ async def research_topic(slug: str, req: Request):
         job_id = create_job("research", slug=slug, topic=topic or "research")
 
         async def _work():
-            directory = await organize_with_claude(
+            existing = get_page_directory(slug)
+            new_directory = await organize_with_claude(
                 topic=topic, instructions=instructions, urls=urls, files=files,
             )
+            # Merge with existing content instead of overwriting
+            if existing.sections:
+                merged = existing.model_dump()
+                existing_titles = {s.title.lower() for s in existing.sections}
+                for section in new_directory.model_dump()["sections"]:
+                    if section["title"].lower() not in existing_titles:
+                        merged["sections"].append(section)
+                    else:
+                        # Find matching section and merge blocks
+                        for i, es in enumerate(merged["sections"]):
+                            if es["title"].lower() == section["title"].lower():
+                                existing_labels = {b.get("label", "") + b.get("type", "") for b in es.get("blocks", [])}
+                                for block in section.get("blocks", []):
+                                    key = block.get("label", "") + block.get("type", "")
+                                    if key not in existing_labels:
+                                        merged["sections"][i]["blocks"].append(block)
+                                break
+                from app.models import Directory as DirModel
+                directory = DirModel(**merged)
+            else:
+                directory = new_directory
             save_page_directory(slug, directory)
             complete_job(job_id)
 
