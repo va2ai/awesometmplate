@@ -149,13 +149,17 @@
 
   function _doPoll(jobId, topic) {
     fetch('/api/jobs/' + jobId)
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (!r.ok) { markJobDone(jobId, 'failed', 'Job not found'); return null; }
+        return r.json();
+      })
       .then(function(job) {
+        if (!job) return;
         if (job.status === 'completed') { markJobDone(jobId, 'completed'); }
         else if (job.status === 'failed') { markJobDone(jobId, 'failed', job.error || 'Unknown error'); }
         else { setTimeout(function() { _doPoll(jobId, topic); }, 2000); }
       })
-      .catch(function() { setTimeout(function() { _doPoll(jobId, topic); }, 3000); });
+      .catch(function() { markJobDone(jobId, 'failed', 'Connection lost'); });
   }
 
   // Resume active jobs on page load
