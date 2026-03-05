@@ -66,10 +66,7 @@ async def call_tool(
     }
 
     # Add Google Search grounding + URL context for research calls
-    # Use gemini-2.5-flash for grounding (supports both google_search and url_context)
     if use_grounding:
-        gemini_model = "gemini-2.5-flash"
-        url = f"{API_URL}/{gemini_model}:generateContent?key={api_key}"
         payload["tools"] = [
             {"google_search": {}},
             {"url_context": {}},
