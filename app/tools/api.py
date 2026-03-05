@@ -5,6 +5,7 @@ import logging
 import os
 
 import httpx
+from json_repair import repair_json
 from dotenv import load_dotenv
 
 from app.config import API_TIMEOUT
@@ -99,17 +100,16 @@ async def call_tool(
         try:
             result = json.loads(text)
         except json.JSONDecodeError as e:
-            # Try to extract the first valid JSON object if there's trailing data
-            if "Extra data" in str(e):
-                decoder = json.JSONDecoder()
-                try:
-                    result, _ = decoder.raw_decode(text)
-                    logger.warning("Gemini returned extra data after JSON, extracted first object")
-                except json.JSONDecodeError:
-                    logger.error("Failed to parse Gemini JSON: %s\nRaw: %s", e, text[:500])
-                    raise RuntimeError(f"Failed to parse Gemini JSON response: {e}")
-            else:
-                logger.error("Failed to parse Gemini JSON: %s\nRaw: %s", e, text[:500])
+            logger.warning("Gemini JSON parse failed (%s), attempting repair...", e)
+            try:
+                repaired = repair_json(text, return_objects=True)
+                if isinstance(repaired, dict):
+                    result = repaired
+                    logger.info("JSON repair succeeded")
+                else:
+                    raise RuntimeError(f"JSON repair returned {type(repaired)}, expected dict")
+            except Exception as repair_err:
+                logger.error("JSON repair also failed: %s\nRaw: %s", repair_err, text[:500])
                 raise RuntimeError(f"Failed to parse Gemini JSON response: {e}")
 
         result["_tokens"] = token_info
