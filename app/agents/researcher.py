@@ -72,6 +72,7 @@ async def organize_with_claude(
         system=get_dynamic_system_prompt(),
         tool_name="create_directory",
         tool_schema=get_dynamic_directory_schema(),
+        use_grounding=True,
     )
     data.pop("_tokens", None)
     return Directory(**data)

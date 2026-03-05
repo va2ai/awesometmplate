@@ -29,8 +29,15 @@ async def call_tool(
     tool_schema: dict,
     model: str = "claude-sonnet-4-6",
     max_tokens: int = 16384,
+    use_grounding: bool = False,
 ) -> dict:
-    """Call Gemini API with JSON structured output. Returns the parsed dict."""
+    """Call Gemini API with JSON structured output. Returns the parsed dict.
+
+    Args:
+        use_grounding: Enable Google Search grounding + URL context tools.
+            Gemini will search the web and fetch URLs mentioned in the prompt
+            to ground its response in real sources. Only use for research calls.
+    """
     load_dotenv(override=True)
     api_key = os.getenv("GEMINI_API_KEY", "")
 
@@ -58,6 +65,16 @@ async def call_tool(
         "generationConfig": gen_config,
     }
 
+    # Add Google Search grounding + URL context for research calls
+    # Use gemini-2.5-flash for grounding (supports both google_search and url_context)
+    if use_grounding:
+        gemini_model = "gemini-2.5-flash"
+        url = f"{API_URL}/{gemini_model}:generateContent?key={api_key}"
+        payload["tools"] = [
+            {"google_search": {}},
+            {"url_context": {}},
+        ]
+
     logger.info("Gemini API call: model=%s tool=%s", gemini_model, tool_name)
 
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
@@ -73,15 +90,21 @@ async def call_tool(
         output_t = usage_meta.get("candidatesTokenCount", 0)
         token_info = record_tokens(input_t, output_t, model)
 
-        logger.info(
-            "Gemini API response: model=%s in=%d out=%d cost=$%.4f",
-            gemini_model, input_t, output_t, token_info["cost_usd"],
-        )
-
         # Parse JSON from response text
         candidates = data.get("candidates", [])
         if not candidates:
             raise RuntimeError("No candidates in Gemini response")
+
+        # Log grounding metadata if present
+        grounding = candidates[0].get("groundingMetadata", {})
+        search_queries = grounding.get("webSearchQueries", [])
+        grounding_chunks = grounding.get("groundingChunks", [])
+
+        logger.info(
+            "Gemini API response: model=%s in=%d out=%d cost=$%.4f grounding_sources=%d search_queries=%s",
+            gemini_model, input_t, output_t, token_info["cost_usd"],
+            len(grounding_chunks), search_queries[:3] if search_queries else [],
+        )
 
         parts = candidates[0].get("content", {}).get("parts", [])
         if not parts:

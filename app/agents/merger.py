@@ -58,4 +58,5 @@ Research this topic and create a comprehensive section."""
         tool_name="create_section",
         tool_schema=SECTION_SCHEMA,
         max_tokens=8192,
+        use_grounding=True,
     )

@@ -25,7 +25,7 @@ def _get_exa_client():
     return _exa_client
 
 
-async def search_exa(query: str, num_results: int = 8, max_chars: int = 10000) -> str:
+async def search_exa(query: str, num_results: int = 15, max_chars: int = 10000) -> str:
     """Search Exa for real web content. Returns formatted text for Claude context."""
     client = _get_exa_client()
     if not client:
