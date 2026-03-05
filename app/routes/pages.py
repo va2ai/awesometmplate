@@ -148,6 +148,83 @@ async def organize_existing(slug: str, request: Request):
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
+@router.post("/api/page/{slug}/ask-ai")
+async def ask_ai(slug: str, request: Request):
+    """Free-form AI message: describe what you want and AI adds it to the page."""
+    page = get_page_or_404(slug)
+    if not page:
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    try:
+        body = await request.json()
+        message = body.get("message", "").strip()
+        if not message:
+            return JSONResponse(status_code=400, content={"error": "Message is required"})
+
+        job_id = create_job("ask-ai", slug=slug, topic=message[:80])
+
+        async def _work():
+            directory = get_page_directory(slug)
+
+            # Build full page context so AI understands what's already there
+            page_context = ""
+            if directory.sections:
+                context_parts = []
+                for sec in directory.sections:
+                    block_types = [b.type for b in sec.blocks] if sec.blocks else []
+                    context_parts.append(
+                        f"- {sec.title}: {sec.description or 'no description'} "
+                        f"({len(sec.blocks)} blocks: {', '.join(block_types)})"
+                    )
+                page_context = (
+                    f"\n\nThis page '{page.title}' ({page.subtitle}) already has these sections:\n"
+                    + "\n".join(context_parts)
+                    + "\n\nDo NOT duplicate existing content. Add NEW content that complements what's already there."
+                )
+
+            instructions = (
+                f"The user is on the '{page.title}' page ({page.subtitle}) and sent this message:\n\n"
+                f'"{message}"\n\n'
+                f"Generate content that fulfills their request. "
+                f"Create sections with appropriate block types (code_grid, info_grid, "
+                f"comparison, stats, steps, table, faq, timeline, badges, checklist, tip, text, link_list). "
+                f"Be specific and detailed based on what they asked for."
+                f"{page_context}"
+            )
+
+            new_content = await organize_with_claude(
+                topic=message, instructions=instructions,
+            )
+
+            # Merge into existing
+            if directory.sections:
+                merged = directory.model_dump()
+                existing_titles = {s.title.lower() for s in directory.sections}
+                for section in new_content.model_dump()["sections"]:
+                    if section["title"].lower() not in existing_titles:
+                        merged["sections"].append(section)
+                    else:
+                        for i, es in enumerate(merged["sections"]):
+                            if es["title"].lower() == section["title"].lower():
+                                for block in section.get("blocks", []):
+                                    merged["sections"][i]["blocks"].append(block)
+                                break
+                from app.models import Directory as DirModel
+                final = DirModel(**merged)
+            else:
+                final = new_content
+
+            save_page_directory(slug, final)
+            complete_job(job_id)
+
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running", "slug": slug}
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("Route error", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+
 @router.delete("/api/page/{slug}")
 async def clear_page(slug: str):
     from app.config import PAGES_DIR
