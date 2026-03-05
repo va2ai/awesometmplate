@@ -52,15 +52,14 @@ async def research_topic(slug: str, req: Request):
             new_directory = await organize_with_claude(
                 topic=topic, instructions=instructions, urls=urls, files=files,
             )
-            # Merge with existing content instead of overwriting
+            # Always merge - never overwrite
+            merged = existing.model_dump()
             if existing.sections:
-                merged = existing.model_dump()
                 existing_titles = {s.title.lower() for s in existing.sections}
                 for section in new_directory.model_dump()["sections"]:
                     if section["title"].lower() not in existing_titles:
                         merged["sections"].append(section)
                     else:
-                        # Find matching section and merge blocks
                         for i, es in enumerate(merged["sections"]):
                             if es["title"].lower() == section["title"].lower():
                                 existing_labels = {b.get("label", "") + b.get("type", "") for b in es.get("blocks", [])}
@@ -69,10 +68,15 @@ async def research_topic(slug: str, req: Request):
                                     if key not in existing_labels:
                                         merged["sections"][i]["blocks"].append(block)
                                 break
-                from app.models import Directory as DirModel
-                directory = DirModel(**merged)
             else:
-                directory = new_directory
+                merged["sections"] = new_directory.model_dump()["sections"]
+            # Always preserve existing title/subtitle if set
+            if not merged.get("title"):
+                merged["title"] = new_directory.title
+            if not merged.get("subtitle"):
+                merged["subtitle"] = new_directory.subtitle
+            from app.models import Directory as DirModel
+            directory = DirModel(**merged)
             save_page_directory(slug, directory)
             complete_job(job_id)
 
@@ -200,9 +204,9 @@ async def ask_ai(slug: str, request: Request):
                 topic=message, instructions=instructions, urls=urls,
             )
 
-            # Merge into existing
+            # Always merge - never overwrite
+            merged = directory.model_dump()
             if directory.sections:
-                merged = directory.model_dump()
                 existing_titles = {s.title.lower() for s in directory.sections}
                 for section in new_content.model_dump()["sections"]:
                     if section["title"].lower() not in existing_titles:
@@ -213,10 +217,14 @@ async def ask_ai(slug: str, request: Request):
                                 for block in section.get("blocks", []):
                                     merged["sections"][i]["blocks"].append(block)
                                 break
-                from app.models import Directory as DirModel
-                final = DirModel(**merged)
             else:
-                final = new_content
+                merged["sections"] = new_content.model_dump()["sections"]
+            if not merged.get("title"):
+                merged["title"] = new_content.title
+            if not merged.get("subtitle"):
+                merged["subtitle"] = new_content.subtitle
+            from app.models import Directory as DirModel
+            final = DirModel(**merged)
 
             save_page_directory(slug, final)
             complete_job(job_id)
