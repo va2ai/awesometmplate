@@ -39,6 +39,14 @@ async def call_tool(
     # Build schema instruction from the tool schema description
     schema_hint = json.dumps(tool_schema, indent=2)
 
+    # Use thinking for heavy content generation, skip for lightweight router calls
+    gen_config = {
+        "maxOutputTokens": max_tokens,
+        "responseMimeType": "application/json",
+    }
+    if max_tokens > 1024:
+        gen_config["thinkingConfig"] = {"thinkingLevel": "HIGH"}
+
     payload = {
         "contents": [
             {"role": "user", "parts": [{"text": user_message + "\n\nRespond with JSON matching this schema:\n" + schema_hint}]}
@@ -46,11 +54,7 @@ async def call_tool(
         "systemInstruction": {
             "parts": [{"text": system}]
         },
-        "generationConfig": {
-            "maxOutputTokens": max_tokens,
-            "responseMimeType": "application/json",
-            "thinkingConfig": {"thinkingLevel": "HIGH"},
-        },
+        "generationConfig": gen_config,
     }
 
     logger.info("Gemini API call: model=%s tool=%s", gemini_model, tool_name)
