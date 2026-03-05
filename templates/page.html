@@ -366,15 +366,16 @@
 
         <!-- TIMELINE -->
         {% elif block.type == "timeline" %}
-        <div class="mb-6 relative">
-          <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-{{ section.color or 'orange' }}-300"></div>
+        <div class="mb-6 space-y-2">
           {% for event in block.content.get("events", []) %}
-          <div class="relative pl-10 pb-6 last:pb-0">
-            <div class="absolute left-2.5 top-1.5 w-3 h-3 bg-{{ section.color or 'orange' }}-500 border-2 border-white rounded-full"></div>
-            <div class="bg-white border-2 border-black p-3 hover:shadow-lg transition-shadow">
+          <div class="flex items-stretch bg-white border-2 border-black hover:shadow-lg transition-shadow overflow-hidden">
+            <div class="bg-{{ section.color or 'orange' }}-500 w-28 flex-shrink-0 flex flex-col items-center justify-center px-3 py-3 border-r-2 border-black">
+              <div class="w-3 h-3 bg-white rounded-full mb-1.5 border-2 border-{{ section.color or 'orange' }}-300"></div>
               {% if event.get("date") %}
-              <span class="text-[10px] font-bold text-{{ section.color or 'orange' }}-600 uppercase">{{ event.get("date", "") }}</span>
+              <span class="text-xs font-black text-white uppercase text-center leading-tight">{{ event.get("date", "") }}</span>
               {% endif %}
+            </div>
+            <div class="flex-1 px-4 py-3 bg-{{ section.color or 'orange' }}-50/40">
               <h4 class="text-sm font-bold text-black">{{ event.get("title", "") }}</h4>
               {% if event.get("description") %}
               <p class="text-xs text-gray-600 mt-1 detail-desc">{{ event.get("description", "") }}</p>
@@ -760,6 +761,46 @@
       });
     }
 
+    // --- Job polling (survives reload/navigation) ---
+    function pollJob(jobId, label) {
+      localStorage.setItem('activeJob', JSON.stringify({ jobId: jobId, topic: label, page: PAGE_SLUG }));
+      showLoading('Claude is working on "' + (label || 'your request') + '"...');
+      _doPoll(jobId, label);
+    }
+
+    function _doPoll(jobId, label) {
+      fetch('/api/jobs/' + jobId)
+        .then(function(r) { return r.json(); })
+        .then(function(job) {
+          if (job.status === 'completed') {
+            localStorage.removeItem('activeJob');
+            location.reload();
+          } else if (job.status === 'failed') {
+            localStorage.removeItem('activeJob');
+            hideLoading();
+            alert('Job failed: ' + (job.error || 'Unknown error'));
+          } else {
+            setTimeout(function() { _doPoll(jobId, label); }, 2000);
+          }
+        })
+        .catch(function() {
+          setTimeout(function() { _doPoll(jobId, label); }, 3000);
+        });
+    }
+
+    // Resume active job on page load
+    (function() {
+      var saved = localStorage.getItem('activeJob');
+      if (saved) {
+        try {
+          var job = JSON.parse(saved);
+          if (job.jobId) {
+            pollJob(job.jobId, job.topic);
+          }
+        } catch(e) { localStorage.removeItem('activeJob'); }
+      }
+    })();
+
     async function doResearch() {
       var urls = [];
       document.querySelectorAll('.url-input').forEach(function(input) {
@@ -773,10 +814,6 @@
       }
 
       closeModals();
-      var parts = [];
-      if (urls.length) parts.push(urls.length + ' URL' + (urls.length > 1 ? 's' : ''));
-      if (uploadedFiles.length) parts.push(uploadedFiles.length + ' file' + (uploadedFiles.length > 1 ? 's' : ''));
-      showLoading('Claude is researching ' + parts.join(' + ') + '...');
 
       try {
         var res = await fetch('/api/page/' + PAGE_SLUG + '/research', {
@@ -790,7 +827,7 @@
         });
         var data = await res.json();
         if (data.error) throw new Error(data.error);
-        location.reload();
+        pollJob(data.jobId, 'research');
       } catch (e) {
         hideLoading();
         alert('Error: ' + e.message);
@@ -801,7 +838,7 @@
       var topic = document.getElementById('addTopic').value.trim();
       if (!topic) return alert('Please enter a topic');
       closeModals();
-      showLoading('Claude is adding "' + topic + '" to the knowledge base...');
+
       try {
         var res = await fetch('/api/page/' + PAGE_SLUG + '/smart-add', {
           method: 'POST',
@@ -813,7 +850,7 @@
         });
         var data = await res.json();
         if (data.error) throw new Error(data.error);
-        location.reload();
+        pollJob(data.jobId, topic);
       } catch (e) {
         hideLoading();
         alert('Error: ' + e.message);
@@ -823,7 +860,7 @@
     async function reorganize() {
       var instructions = prompt('How should Claude reorganize this directory?', 'Reorganize into better categories and improve descriptions');
       if (!instructions) return;
-      showLoading('Claude is reorganizing...');
+
       try {
         var res = await fetch('/api/page/' + PAGE_SLUG + '/organize', {
           method: 'POST',
@@ -832,7 +869,7 @@
         });
         var data = await res.json();
         if (data.error) throw new Error(data.error);
-        location.reload();
+        pollJob(data.jobId, 'reorganize');
       } catch (e) {
         hideLoading();
         alert('Error: ' + e.message);

@@ -6,10 +6,12 @@ PAGES_DIR = DATA_DIR / "pages"
 CONFIG_FILE = DATA_DIR / "site_config.json"
 TOKEN_FILE = DATA_DIR / "token_usage.json"
 CUSTOM_BLOCKS_FILE = DATA_DIR / "custom_blocks.json"
+JOBS_DIR = DATA_DIR / "jobs"
 
 # Ensure directories exist
 DATA_DIR.mkdir(exist_ok=True)
 PAGES_DIR.mkdir(exist_ok=True)
+JOBS_DIR.mkdir(exist_ok=True)
 
 # Pricing per million tokens
 PRICING = {

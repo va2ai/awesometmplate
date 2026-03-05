@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.routes.home import get_page_directory, get_page_or_404, save_page_directory
 from app.services.block_creator import load_custom_blocks
+from app.services.job_manager import create_job, complete_job, run_job_in_background
 from app.tools.token_tracker import load_token_usage
 from app.agents import organize_with_claude, smart_add_with_claude
 
@@ -43,11 +44,19 @@ async def research_topic(slug: str, req: Request):
         instructions = body.get("instructions", "")
         urls = body.get("urls", [])
         files = body.get("files", [])
-        directory = await organize_with_claude(
-            topic=topic, instructions=instructions, urls=urls, files=files,
-        )
-        save_page_directory(slug, directory)
-        return {"status": "ok", "directory": directory.model_dump()}
+
+        job_id = create_job("research", slug=slug, topic=topic or "research")
+
+        async def _work():
+            directory = await organize_with_claude(
+                topic=topic, instructions=instructions, urls=urls, files=files,
+            )
+            save_page_directory(slug, directory)
+            complete_job(job_id)
+
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running", "slug": slug}
+
     except Exception as e:
         import traceback
         return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
@@ -66,15 +75,20 @@ async def smart_add(slug: str, request: Request):
         if not topic:
             return JSONResponse(status_code=400, content={"error": "Topic is required"})
 
-        directory = get_page_directory(slug)
+        job_id = create_job("smart-add", slug=slug, topic=topic)
 
-        if not directory.sections:
-            new_dir = await organize_with_claude(topic=topic, instructions=description)
-        else:
-            new_dir = await smart_add_with_claude(directory, topic, description)
+        async def _work():
+            directory = get_page_directory(slug)
+            if not directory.sections:
+                new_dir = await organize_with_claude(topic=topic, instructions=description)
+            else:
+                new_dir = await smart_add_with_claude(directory, topic, description)
+            save_page_directory(slug, new_dir)
+            complete_job(job_id)
 
-        save_page_directory(slug, new_dir)
-        return {"status": "ok", "directory": new_dir.model_dump()}
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running", "slug": slug}
+
     except Exception as e:
         import traceback
         return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
@@ -90,12 +104,20 @@ async def organize_existing(slug: str, request: Request):
         directory = get_page_directory(slug)
         instructions = body.get("instructions", "Reorganize and improve this directory")
         existing_json = json.dumps(directory.model_dump(), indent=2)
-        new_directory = await organize_with_claude(
-            topic=directory.title,
-            instructions=f"Reorganize this existing directory:\n{existing_json}\n\nInstructions: {instructions}",
-        )
-        save_page_directory(slug, new_directory)
-        return {"status": "ok", "directory": new_directory.model_dump()}
+
+        job_id = create_job("organize", slug=slug, topic=directory.title)
+
+        async def _work():
+            new_directory = await organize_with_claude(
+                topic=directory.title,
+                instructions=f"Reorganize this existing directory:\n{existing_json}\n\nInstructions: {instructions}",
+            )
+            save_page_directory(slug, new_directory)
+            complete_job(job_id)
+
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running", "slug": slug}
+
     except Exception as e:
         import traceback
         return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})

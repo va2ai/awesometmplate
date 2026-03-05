@@ -31,9 +31,11 @@ def create_app() -> FastAPI:
     from app.routes.home import router as home_router
     from app.routes.pages import router as pages_router
     from app.routes.api import router as api_router
+    from app.routes.jobs import router as jobs_router
 
     app.include_router(home_router)
     app.include_router(pages_router)
     app.include_router(api_router)
+    app.include_router(jobs_router)
 
     return app

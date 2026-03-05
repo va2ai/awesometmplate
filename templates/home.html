@@ -256,6 +256,52 @@
       return /^https?:\/\//i.test(str);
     }
 
+    // --- Job polling (survives reload) ---
+    function pollJob(jobId, topic) {
+      localStorage.setItem('activeJob', JSON.stringify({ jobId: jobId, topic: topic, page: 'home' }));
+      showLoading('Claude is working on "' + (topic || 'your request') + '"...');
+      _doPoll(jobId, topic);
+    }
+
+    function _doPoll(jobId, topic) {
+      fetch('/api/jobs/' + jobId)
+        .then(function(r) { return r.json(); })
+        .then(function(job) {
+          if (job.status === 'completed') {
+            localStorage.removeItem('activeJob');
+            if (job.slug) {
+              window.location.href = '/page/' + job.slug;
+            } else {
+              hideLoading();
+              location.reload();
+            }
+          } else if (job.status === 'failed') {
+            localStorage.removeItem('activeJob');
+            hideLoading();
+            document.getElementById('globalAddBtn').disabled = false;
+            alert('Job failed: ' + (job.error || 'Unknown error'));
+          } else {
+            setTimeout(function() { _doPoll(jobId, topic); }, 2000);
+          }
+        })
+        .catch(function() {
+          setTimeout(function() { _doPoll(jobId, topic); }, 3000);
+        });
+    }
+
+    // Resume active job on page load
+    (function() {
+      var saved = localStorage.getItem('activeJob');
+      if (saved) {
+        try {
+          var job = JSON.parse(saved);
+          if (job.jobId) {
+            pollJob(job.jobId, job.topic);
+          }
+        } catch(e) { localStorage.removeItem('activeJob'); }
+      }
+    })();
+
     async function doGlobalAdd() {
       var input = document.getElementById('globalTopic').value.trim();
 
@@ -273,7 +319,6 @@
 
       var btn = document.getElementById('globalAddBtn');
       btn.disabled = true;
-      showLoading('Claude is routing "' + (topic || 'files') + '" to the right page...');
 
       try {
         var payload = { topic: topic };
@@ -288,7 +333,7 @@
         });
         var data = await res.json();
         if (data.error) throw new Error(data.error);
-        window.location.href = '/page/' + data.slug;
+        pollJob(data.jobId, topic);
       } catch (e) {
         hideLoading();
         btn.disabled = false;

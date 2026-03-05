@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from app.config import CONFIG_FILE, PAGES_DIR
 from app.models import Directory, Page, SiteConfig
 from app.services.claude import load_directory, save_directory
+from app.services.job_manager import create_job, complete_job, fail_job, run_job_in_background
 from app.tools.token_tracker import load_token_usage
 from app.agents import organize_with_claude, route_to_page, smart_add_with_claude
 
@@ -69,7 +70,7 @@ async def index(request: Request):
 
 @router.post("/api/add-topic")
 async def add_topic_global(request: Request):
-    """Route a topic to the correct page via Haiku, then smart-add it."""
+    """Route a topic to the correct page via Haiku, then smart-add it. Returns jobId."""
     try:
         body = await request.json()
         topic = body.get("topic", "").strip()
@@ -83,36 +84,35 @@ async def add_topic_global(request: Request):
         if not topic:
             topic = url or (files[0]["name"] if files else "Unknown")
 
-        config = load_site_config()
-        pages_data = [p.model_dump() for p in config.pages]
+        job_id = create_job("add-topic", topic=topic, meta={"url": url, "has_files": bool(files)})
 
-        # Phase 1: Route to page via Haiku
-        route_result = await route_to_page(topic, pages_data)
-        route_result.pop("_tokens", None)
-        slug = route_result.get("page_slug", "misc")
+        async def _work():
+            config = load_site_config()
+            pages_data = [p.model_dump() for p in config.pages]
 
-        # Validate slug exists
-        if not any(p.slug == slug for p in config.pages):
-            slug = "misc"
+            route_result = await route_to_page(topic, pages_data)
+            route_result.pop("_tokens", None)
+            slug = route_result.get("page_slug", "misc")
 
-        # Phase 2: Smart add or research to the routed page
-        directory = get_page_directory(slug)
-        urls = [url] if url else []
+            if not any(p.slug == slug for p in config.pages):
+                slug = "misc"
 
-        if not directory.sections or urls or files:
-            new_dir = await organize_with_claude(
-                topic=topic, instructions=description, urls=urls, files=files,
-            )
-        else:
-            new_dir = await smart_add_with_claude(directory, topic, description)
+            directory = get_page_directory(slug)
+            urls = [url] if url else []
 
-        save_page_directory(slug, new_dir)
-        return {
-            "status": "ok",
-            "slug": slug,
-            "reasoning": route_result.get("reasoning", ""),
-            "directory": new_dir.model_dump(),
-        }
+            if not directory.sections or urls or files:
+                new_dir = await organize_with_claude(
+                    topic=topic, instructions=description, urls=urls, files=files,
+                )
+            else:
+                new_dir = await smart_add_with_claude(directory, topic, description)
+
+            save_page_directory(slug, new_dir)
+            complete_job(job_id, slug=slug)
+
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running", "topic": topic}
+
     except Exception as e:
         import traceback
         return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
