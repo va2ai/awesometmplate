@@ -31,6 +31,7 @@ DIRECTORY_SCHEMA = {
                                         "link_list", "code_grid", "info_grid", "comparison",
                                         "stats", "steps", "tip", "text", "table", "faq",
                                         "timeline", "alert", "badges", "checklist",
+                                        "quote", "key_value",
                                     ],
                                     "description": "Block layout type",
                                 },
@@ -51,7 +52,9 @@ DIRECTORY_SCHEMA = {
                                     "timeline: {events: [{date, title, description}]}. "
                                     "alert: {text: str, severity: 'info'|'warning'|'error'|'success'}. "
                                     "badges: {items: [{label, color}]}. "
-                                    "checklist: {items: [{text, checked: bool}]}.",
+                                    "checklist: {items: [{text, checked: bool}]}. "
+                                    "quote: {text: str, attribution: str, source: str}. "
+                                    "key_value: {items: [{key: str, value: str}]}.",
                                 },
                             },
                             "required": ["type", "content"],

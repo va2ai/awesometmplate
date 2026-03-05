@@ -88,7 +88,7 @@ def get_all_block_type_names() -> list[str]:
     builtin = [
         "link_list", "code_grid", "info_grid", "comparison", "stats",
         "steps", "tip", "text", "table", "faq", "timeline", "alert",
-        "badges", "checklist",
+        "badges", "checklist", "quote", "key_value",
     ]
     custom = [b["type_name"] for b in load_custom_blocks()]
     return builtin + custom

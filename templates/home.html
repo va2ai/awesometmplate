@@ -38,10 +38,40 @@
             <iconify-icon icon="ph:coins-bold"></iconify-icon>
             <span id="navTokenCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</span>
           </button>
+          <button onclick="toggleHamburger()" class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white p-2 border border-white/20 transition-colors" aria-label="Toggle menu">
+            <iconify-icon icon="ph:list-bold" width="20"></iconify-icon>
+          </button>
         </div>
       </div>
     </nav>
   </header>
+
+  <!-- HAMBURGER MENU OVERLAY -->
+  <div id="hamburgerMenu" class="fixed inset-0 z-[90] hidden">
+    <div class="absolute inset-0 bg-gray-900">
+      <div class="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16">
+        <span class="font-black text-white text-base sm:text-lg tracking-tight">Awesome KB</span>
+        <button onclick="toggleHamburger()" class="text-white p-2" aria-label="Close menu">
+          <iconify-icon icon="ph:x-bold" width="24"></iconify-icon>
+        </button>
+      </div>
+      <nav class="px-4 sm:px-6 pt-2 space-y-1 overflow-y-auto" style="max-height: calc(100vh - 4rem);">
+        <a href="/" class="flex items-center gap-3 px-4 py-3.5 text-white font-bold text-sm bg-white/20 border-2 border-white/30">
+          <iconify-icon icon="ph:house-bold" width="20"></iconify-icon>
+          Home
+          <span class="ml-auto text-[10px] bg-white/30 px-2 py-0.5 font-bold uppercase">Current</span>
+        </a>
+        <div class="border-t border-white/20 my-3"></div>
+        {% for p in config.pages %}
+        <a href="/page/{{ p.slug }}"
+           class="flex items-center gap-3 px-4 py-3.5 text-white/70 hover:text-white font-bold text-sm hover:bg-white/10 active:bg-white/20 transition-colors">
+          <iconify-icon icon="{{ p.icon.replace('i-', '').replace('-', ':') if 'i-' in p.icon else p.icon }}" width="20"></iconify-icon>
+          {{ p.title }}
+        </a>
+        {% endfor %}
+      </nav>
+    </div>
+  </div>
 
   <!-- TOKEN PANEL -->
   <div id="tokenPanel" class="fixed top-12 sm:top-14 right-2 sm:right-6 z-[60] hidden">
@@ -191,6 +221,9 @@
 
     function toggleTokenPanel() {
       document.getElementById('tokenPanel').classList.toggle('hidden');
+    }
+    function toggleHamburger() {
+      document.getElementById('hamburgerMenu').classList.toggle('hidden');
     }
     document.addEventListener('click', function(e) {
       var panel = document.getElementById('tokenPanel');

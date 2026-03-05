@@ -57,34 +57,74 @@
             <iconify-icon icon="ph:coins-bold"></iconify-icon>
             <span id="navTokenCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</span>
           </button>
-          <button onclick="openResearchModal()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 text-sm font-bold border border-white/30 transition-colors">
-            <iconify-icon icon="ph:plus-bold" class="mr-1"></iconify-icon> New Research
-          </button>
           <button onclick="openAddModal()" class="bg-white text-{{ page.color }}-600 px-4 py-2 text-sm font-bold border-2 border-black hover:shadow-lg transition-shadow">
-            <iconify-icon icon="ph:brain-bold" class="mr-1"></iconify-icon> Smart Add
+            <iconify-icon icon="ph:plus-bold" class="mr-1"></iconify-icon> Add Content
           </button>
           <button onclick="openAskAiModal()" class="bg-gray-900 text-white px-4 py-2 text-sm font-bold border-2 border-black hover:shadow-lg transition-shadow">
             <iconify-icon icon="ph:chat-circle-text-bold" class="mr-1"></iconify-icon> Ask AI
           </button>
         </div>
-        <!-- Mobile token button -->
-        <div class="flex sm:hidden items-center gap-2">
-          <button onclick="toggleTokenPanel()" class="bg-white/10 active:bg-white/30 text-white p-2 text-xs font-bold border border-white/20">
+        <!-- Right side: token + hamburger -->
+        <div class="flex items-center gap-2">
+          <button onclick="toggleTokenPanel()" class="sm:hidden bg-white/10 active:bg-white/30 text-white p-2 text-xs font-bold border border-white/20">
             <iconify-icon icon="ph:coins-bold" width="16"></iconify-icon>
+          </button>
+          <button onclick="toggleHamburger()" class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white p-2 border border-white/20 transition-colors" aria-label="Toggle menu">
+            <iconify-icon icon="ph:list-bold" width="20"></iconify-icon>
           </button>
         </div>
       </div>
     </nav>
   </header>
 
+  <!-- HAMBURGER MENU OVERLAY -->
+  <div id="hamburgerMenu" class="fixed inset-0 z-[90] hidden">
+    <div class="absolute inset-0 bg-{{ page.color }}-500">
+      <div class="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 lg:h-14 border-b border-white/20">
+        <span class="font-black text-white text-base sm:text-lg tracking-tight">{{ page.title }}</span>
+        <button onclick="toggleHamburger()" class="text-white p-2" aria-label="Close menu">
+          <iconify-icon icon="ph:x-bold" width="24"></iconify-icon>
+        </button>
+      </div>
+      <nav class="px-4 sm:px-6 pt-3 overflow-y-auto" style="max-height: calc(100vh - 4rem);">
+        <!-- Section anchors -->
+        <div class="text-[10px] font-bold text-white/50 uppercase tracking-widest px-4 mb-2">Sections</div>
+        <div class="space-y-1 mb-4">
+          {% for section in directory.sections %}
+          <button onclick="scrollToSection('section-{{ loop.index0 }}'); toggleHamburger();"
+                  class="w-full flex items-center gap-3 px-4 py-3 text-white font-bold text-sm hover:bg-white/10 active:bg-white/20 transition-colors text-left">
+            <iconify-icon icon="{{ section.icon_class.replace('i-', '').replace('-', ':') if section.icon_class and 'i-' in section.icon_class else (section.icon_class or 'ph:folder-bold') }}" width="18"></iconify-icon>
+            {{ section.title }}
+          </button>
+          {% endfor %}
+        </div>
+
+        <!-- Page links -->
+        <div class="border-t border-white/20 pt-3 mb-2">
+          <div class="text-[10px] font-bold text-white/50 uppercase tracking-widest px-4 mb-2">Pages</div>
+        </div>
+        <div class="space-y-1">
+          {% for p in config.pages %}
+          <a href="/page/{{ p.slug }}"
+             class="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors {% if p.slug == page.slug %}text-white font-bold bg-white/20{% else %}text-white/70 hover:text-white font-medium hover:bg-white/10 active:bg-white/20{% endif %}">
+            <iconify-icon icon="{{ p.icon.replace('i-', '').replace('-', ':') if 'i-' in p.icon else p.icon }}" width="18"></iconify-icon>
+            {{ p.title }}
+          </a>
+          {% endfor %}
+          <a href="/" class="flex items-center gap-3 px-4 py-2.5 text-white/60 hover:text-white font-medium text-sm hover:bg-white/10 active:bg-white/20 transition-colors">
+            <iconify-icon icon="ph:house-bold" width="18"></iconify-icon>
+            Home
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+
   <!-- MOBILE BOTTOM ACTION BAR -->
   <div class="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-gray-900 border-t-2 border-black mobile-action-bar">
     <div class="flex gap-0">
-      <button onclick="openResearchModal()" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800 border-r border-gray-700">
-        <iconify-icon icon="ph:magnifying-glass-bold" width="16"></iconify-icon> Research
-      </button>
       <button onclick="openAddModal()" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800 border-r border-gray-700 bg-{{ page.color }}-600">
-        <iconify-icon icon="ph:brain-bold" width="16"></iconify-icon> Add
+        <iconify-icon icon="ph:plus-bold" width="16"></iconify-icon> Add Content
       </button>
       <button onclick="openAskAiModal()" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800">
         <iconify-icon icon="ph:chat-circle-text-bold" width="16"></iconify-icon> Ask AI
@@ -174,11 +214,11 @@
 
       <!-- SECTION DESCRIPTION + URL -->
       {% if section.description or section.url %}
-      <div class="mb-4 flex items-start justify-between">
-        <p class="text-sm text-gray-700 max-w-3xl">{{ section.description }}</p>
+      <div class="mb-4">
+        <p class="text-sm text-gray-700 max-w-3xl" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">{{ section.description }}</p>
         {% if section.url %}
         <a href="{{ section.url }}" target="_blank" rel="noopener"
-           class="text-xs text-blue-600 hover:underline flex items-center gap-1 flex-shrink-0 ml-4">
+           class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1.5">
           <iconify-icon icon="ph:arrow-up-right"></iconify-icon>
           {{ section.url | replace('https://', '') | replace('http://', '') }}
         </a>
@@ -228,31 +268,33 @@
         <div class="mb-6 border-l border-r border-gray-200 bg-white">
           {% for item in block.content.get("items", []) %}
           <a href="{{ item.get('url', '#') }}" target="_blank" rel="noopener"
-             class="flex items-center gap-4 p-3 hover:bg-gray-50 transition-colors border-b border-gray-200 {% if loop.first %}border-t{% endif %}">
+             class="flex items-start gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-200 {% if loop.first %}border-t{% endif %}">
             {% if item.get("url") %}
             <img src="https://www.google.com/s2/favicons?domain={{ item.get('url', '') }}&sz=32"
-                 alt="" class="w-6 h-6 flex-shrink-0 rounded-full"
+                 alt="" class="w-5 h-5 flex-shrink-0 rounded mt-0.5"
                  onerror="this.style.display='none'">
             {% else %}
-            <iconify-icon icon="ph:link-bold" class="w-6 h-6 flex-shrink-0 text-gray-400"></iconify-icon>
+            <iconify-icon icon="ph:link-bold" class="w-5 h-5 flex-shrink-0 text-gray-400 mt-0.5"></iconify-icon>
             {% endif %}
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between mb-1">
-                <h3 class="text-md font-bold text-black truncate">{{ item.get("title", "") }}</h3>
+            <div class="flex-1 min-w-0 overflow-hidden">
+              {% if item.get("title") %}
+              <div class="flex items-center justify-between mb-0.5">
+                <h3 class="text-sm font-bold text-black truncate">{{ item.get("title", "") }}</h3>
                 {% if item.get("stars") %}
-                <div class="bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm ml-2">
+                <div class="bg-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-sm ml-2 flex-shrink-0">
                   <iconify-icon icon="ph:star-fill"></iconify-icon> {{ item.get("stars", "") }}
                 </div>
                 {% endif %}
               </div>
+              {% endif %}
               {% if item.get("description") %}
-              <p class="text-sm text-gray-600 line-clamp-2">{{ item.get("description", "") }}</p>
+              <p class="text-xs text-gray-600" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ item.get("description", "") }}</p>
               {% endif %}
               {% if item.get("url") %}
-              <div class="text-xs text-blue-600 mt-1 truncate">{{ item.get("url", "") | replace('https://', '') | replace('http://', '') }}</div>
+              <div class="text-[11px] text-blue-600 mt-1 truncate">{{ item.get("url", "") | replace('https://', '') | replace('http://', '') }}</div>
               {% endif %}
             </div>
-            <iconify-icon icon="ph:arrow-up-right" class="text-gray-400 flex-shrink-0"></iconify-icon>
+            <iconify-icon icon="ph:arrow-up-right" class="text-gray-400 flex-shrink-0 mt-0.5"></iconify-icon>
           </a>
           {% endfor %}
         </div>
@@ -473,6 +515,27 @@
           {% endfor %}
         </div>
 
+        <!-- QUOTE -->
+        {% elif block.type == "quote" %}
+        <div class="bg-white border-2 border-black mb-6 p-5 relative">
+          <iconify-icon icon="ph:quotes-bold" width="28" class="text-{{ section.color }}-400 absolute top-3 left-4 opacity-40"></iconify-icon>
+          <blockquote class="pl-8 text-sm text-gray-800 italic leading-relaxed">{{ block.content.get("text", "") }}</blockquote>
+          {% if block.content.get("attribution") %}
+          <div class="mt-3 pl-8 text-xs font-bold text-gray-700">-- {{ block.content.get("attribution", "") }}{% if block.content.get("source") %}, <span class="font-normal text-gray-500">{{ block.content.get("source", "") }}</span>{% endif %}</div>
+          {% endif %}
+        </div>
+
+        <!-- KEY VALUE -->
+        {% elif block.type == "key_value" %}
+        <div class="bg-white border-2 border-black mb-6 divide-y divide-gray-200">
+          {% for item in block.content.get("items", []) %}
+          <div class="flex flex-col sm:flex-row px-4 py-2.5">
+            <span class="text-xs font-bold text-gray-900 sm:w-1/3 flex-shrink-0">{{ item.get("key", "") }}</span>
+            <span class="text-xs text-gray-600 sm:w-2/3 mt-0.5 sm:mt-0">{{ item.get("value", "") }}</span>
+          </div>
+          {% endfor %}
+        </div>
+
         <!-- CUSTOM BLOCK TYPES (from block creator agent) -->
         {% elif custom_blocks is defined and block.type in custom_blocks %}
         {{ render_custom_block(custom_blocks[block.type].html_template, block, section) }}
@@ -569,20 +632,26 @@
   </footer>
 
   <!-- RESEARCH MODAL -->
-  <div id="researchModal" class="fixed inset-0 z-[100] hidden">
+  <!-- ADD CONTENT MODAL (combined research + smart add) -->
+  <div id="addModal" class="fixed inset-0 z-[100] hidden">
     <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
     <div class="absolute inset-0 flex items-end sm:items-center justify-center sm:p-4">
       <div class="bg-white border-2 border-black w-full sm:max-w-lg relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-none safe-bottom">
         <div class="bg-{{ page.color }}-500 text-white px-4 py-3 border-b-2 border-black sticky top-0 z-10 rounded-t-2xl sm:rounded-none">
           <h2 class="font-black flex items-center gap-2">
-            <iconify-icon icon="ph:magnifying-glass-bold"></iconify-icon>
-            Research a Topic
+            <iconify-icon icon="ph:plus-bold"></iconify-icon>
+            Add Content
           </h2>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-4 sm:p-6 space-y-4">
           <div>
-            <label class="text-xs font-bold text-black block mb-1">Instructions (optional)</label>
-            <textarea id="researchInstructions" rows="2" placeholder="e.g. Focus on async frameworks, include benchmarks, compare top 5..."
+            <label class="text-xs font-bold text-black block mb-1">Topic / Item</label>
+            <input id="addTopic" type="text" placeholder="e.g. Redis, Docker, TailwindCSS..."
+                   class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-{{ page.color }}-300">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-black block mb-1">Instructions / Context (optional)</label>
+            <textarea id="addDescription" rows="2" placeholder="e.g. Focus on async frameworks, include benchmarks, compare top 5..."
                       class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-{{ page.color }}-300"></textarea>
           </div>
 
@@ -599,7 +668,7 @@
                 </button>
               </div>
             </div>
-            <p class="text-[10px] text-gray-400 mt-1">Add URLs for Claude to read and incorporate into the research.</p>
+            <p class="text-[10px] text-gray-400 mt-1">Add URLs for Claude to read and incorporate.</p>
           </div>
 
           <!-- FILE INPUT -->
@@ -620,45 +689,11 @@
             <div id="filePreviewList" class="space-y-1 mt-2"></div>
           </div>
 
-          <p class="text-[10px] text-gray-400">New research will be merged with existing content.</p>
+          <p class="text-[10px] text-gray-400">Claude will intelligently place content in the right section, or create a new one.</p>
           <div class="flex gap-2">
-            <button onclick="doResearch()" id="researchBtn"
+            <button onclick="doAddContent()" id="addContentBtn"
                     class="flex-1 bg-{{ page.color }}-500 text-white px-4 py-3 font-bold border-2 border-black hover:shadow-lg transition-shadow text-sm">
-              <iconify-icon icon="ph:sparkle-bold" class="mr-1"></iconify-icon> Research with Claude
-            </button>
-            <button onclick="closeModals()" class="px-4 py-3 border-2 border-black text-sm font-bold hover:bg-gray-50">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SMART ADD MODAL -->
-  <div id="addModal" class="fixed inset-0 z-[100] hidden">
-    <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
-    <div class="absolute inset-0 flex items-end sm:items-center justify-center sm:p-4">
-      <div class="bg-white border-2 border-black w-full sm:max-w-lg relative rounded-t-2xl sm:rounded-none safe-bottom">
-        <div class="bg-violet-600 text-white px-4 py-3 border-b-2 border-black rounded-t-2xl sm:rounded-none">
-          <h2 class="font-black flex items-center gap-2">
-            <iconify-icon icon="ph:brain-bold"></iconify-icon>
-            Smart Add
-          </h2>
-        </div>
-        <div class="p-6 space-y-4">
-          <div>
-            <label class="text-xs font-bold text-black block mb-1">Topic / Item</label>
-            <input id="addTopic" type="text" placeholder="e.g. Redis, Docker, TailwindCSS..."
-                   class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-violet-300">
-          </div>
-          <div>
-            <label class="text-xs font-bold text-black block mb-1">Description / Context (optional)</label>
-            <textarea id="addDescription" rows="3" placeholder="Any details to help Claude categorize and research this..."
-                      class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"></textarea>
-          </div>
-          <p class="text-[10px] text-gray-400">Claude will decide where this fits in the existing directory, or create a new category. Max 8 categories before auto-restructure.</p>
-          <div class="flex gap-2">
-            <button onclick="doSmartAdd()" class="flex-1 bg-violet-600 text-white px-4 py-3 font-bold border-2 border-black hover:shadow-lg transition-shadow text-sm">
-              <iconify-icon icon="ph:brain-bold" class="mr-1"></iconify-icon> Smart Add
+              <iconify-icon icon="ph:sparkle-bold" class="mr-1"></iconify-icon> Add with Claude
             </button>
             <button onclick="closeModals()" class="px-4 py-3 border-2 border-black text-sm font-bold hover:bg-gray-50">Cancel</button>
           </div>
@@ -698,12 +733,24 @@
     </div>
   </div>
 
+  <!-- GO TO TOP BUTTON -->
+  <button id="goTopBtn" onclick="window.scrollTo({top:0})" class="fixed bottom-16 sm:bottom-6 left-4 sm:left-6 z-[100] hidden bg-gray-900 text-white w-10 h-10 border-2 border-black shadow-lg flex items-center justify-center active:bg-gray-700 hover:shadow-xl transition-all">
+    <iconify-icon icon="ph:arrow-up-bold" width="18"></iconify-icon>
+  </button>
+
   <!-- JOBS PANEL -->
   <div id="jobsPanel" class="fixed bottom-14 sm:bottom-6 right-4 sm:right-6 z-[200] space-y-2 hidden"></div>
 
   <script>
+    // Go to top visibility
+    window.addEventListener('scroll', function() {
+      var btn = document.getElementById('goTopBtn');
+      if (window.scrollY > 400) { btn.classList.remove('hidden'); btn.classList.add('flex'); }
+      else { btn.classList.add('hidden'); btn.classList.remove('flex'); }
+    });
+
     function scrollToSection(id) {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById(id)?.scrollIntoView({ block: 'start' });
     }
 
     function copyCode(btn) {
@@ -718,13 +765,14 @@
       }, 2000);
     }
 
-    function openResearchModal() { document.getElementById('researchModal').classList.remove('hidden'); }
-    function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
+    function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addTopic').focus(); }
     function openAskAiModal() { document.getElementById('askAiModal').classList.remove('hidden'); document.getElementById('askAiMessage').focus(); }
     function closeModals() {
-      document.getElementById('researchModal').classList.add('hidden');
       document.getElementById('addModal').classList.add('hidden');
       document.getElementById('askAiModal').classList.add('hidden');
+    }
+    function toggleHamburger() {
+      document.getElementById('hamburgerMenu').classList.toggle('hidden');
     }
 
     function toggleTokenPanel() {
@@ -934,57 +982,52 @@
       }
     })();
 
-    async function doResearch() {
+    async function doAddContent() {
+      var topic = document.getElementById('addTopic').value.trim();
+      var description = document.getElementById('addDescription').value.trim();
       var urls = [];
       document.querySelectorAll('.url-input').forEach(function(input) {
         var val = input.value.trim();
         if (val) urls.push(val);
       });
-      var instructions = document.getElementById('researchInstructions').value.trim();
+      var hasUrls = urls.length > 0;
+      var hasFiles = uploadedFiles.length > 0;
 
-      if (!urls.length && !uploadedFiles.length && !instructions) {
-        return alert('Please provide at least a URL, file, or instructions');
+      if (!topic && !hasUrls && !hasFiles && !description) {
+        return;
       }
 
       closeModals();
 
       try {
-        var res = await fetch('/api/page/' + PAGE_SLUG + '/research', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            urls: urls,
-            files: uploadedFiles.map(function(f) { return { name: f.name, content: f.content }; }),
-            instructions: instructions
-          })
-        });
-        var data = await res.json();
-        if (data.error) throw new Error(data.error);
-        addJob(data.jobId, 'Research');
+        // If we have URLs or files, use research endpoint (merges with existing)
+        // Otherwise use smart-add (routes to correct section)
+        if (hasUrls || hasFiles) {
+          var res = await fetch('/api/page/' + PAGE_SLUG + '/research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              topic: topic,
+              urls: urls,
+              files: uploadedFiles.map(function(f) { return { name: f.name, content: f.content }; }),
+              instructions: description
+            })
+          });
+          var data = await res.json();
+          if (data.error) throw new Error(data.error);
+          addJob(data.jobId, topic || 'Research');
+        } else {
+          var res = await fetch('/api/page/' + PAGE_SLUG + '/smart-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic: topic, description: description })
+          });
+          var data = await res.json();
+          if (data.error) throw new Error(data.error);
+          addJob(data.jobId, topic);
+        }
       } catch (e) {
-        alert('Error: ' + e.message);
-      }
-    }
-
-    async function doSmartAdd() {
-      var topic = document.getElementById('addTopic').value.trim();
-      if (!topic) return alert('Please enter a topic');
-      closeModals();
-
-      try {
-        var res = await fetch('/api/page/' + PAGE_SLUG + '/smart-add', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            topic: topic,
-            description: document.getElementById('addDescription').value.trim()
-          })
-        });
-        var data = await res.json();
-        if (data.error) throw new Error(data.error);
-        addJob(data.jobId, topic);
-      } catch (e) {
-        alert('Error: ' + e.message);
+        // silently fail, job toast will show error
       }
     }
 
