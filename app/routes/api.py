@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from app.routes.home import load_site_config
 from app.services.block_creator import load_custom_blocks
 from app.agents import create_new_block_type
+from app.services.job_manager import create_job, complete_job, fail_job, run_job_in_background
 from app.tools.token_tracker import load_token_usage
 
 router = APIRouter()
@@ -32,8 +33,19 @@ async def create_block_type_endpoint(request: Request):
         description = body.get("description", "")
         if not description:
             return JSONResponse(status_code=400, content={"error": "description required"})
-        result = await create_new_block_type(description)
-        return {"status": "ok", "block_type": result}
+
+        job_id = create_job("custom-block", topic=description[:80])
+
+        async def _work():
+            result = await create_new_block_type(description)
+            if result.get("error"):
+                fail_job(job_id, result["error"])
+            else:
+                complete_job(job_id, result=result)
+
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running"}
+
     except Exception as e:
         import logging
         logging.getLogger(__name__).error("Route error", exc_info=True)
