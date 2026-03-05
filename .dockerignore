@@ -1,0 +1,12 @@
+data/
+.env
+__pycache__/
+*.pyc
+.git/
+.claude/
+.venv/
+*.md
+models.py
+claude_service.py
+block_creator.py
+test_api.py

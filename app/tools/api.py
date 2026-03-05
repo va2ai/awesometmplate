@@ -1,11 +1,15 @@
 """Low-level Claude API caller. The single point of contact with Anthropic."""
 
+import logging
 import os
 
 import httpx
 from dotenv import load_dotenv
 
+from app.config import API_TIMEOUT
 from app.tools.token_tracker import record_tokens
+
+logger = logging.getLogger(__name__)
 
 API_URL = "https://api.anthropic.com/v1/messages"
 
@@ -43,16 +47,24 @@ async def call_tool(
         "messages": [{"role": "user", "content": user_message}],
     }
 
-    async with httpx.AsyncClient(timeout=180.0) as client:
+    logger.info("Claude API call: model=%s tool=%s", model, tool_name)
+
+    async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         resp = await client.post(API_URL, headers=headers, json=payload)
         if resp.status_code != 200:
-            raise RuntimeError("Anthropic API " + str(resp.status_code) + ": " + resp.text)
+            logger.error("Claude API error: %d", resp.status_code)
+            raise RuntimeError(f"Anthropic API {resp.status_code}")
         data = resp.json()
 
         usage = data.get("usage", {})
         input_t = usage.get("input_tokens", 0)
         output_t = usage.get("output_tokens", 0)
         token_info = record_tokens(input_t, output_t, model)
+
+        logger.info(
+            "Claude API response: model=%s in=%d out=%d cost=$%.4f",
+            model, input_t, output_t, token_info["cost_usd"],
+        )
 
         for block in data.get("content", []):
             if block.get("type") == "tool_use":

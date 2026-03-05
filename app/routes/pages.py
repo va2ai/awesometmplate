@@ -58,8 +58,9 @@ async def research_topic(slug: str, req: Request):
         return {"jobId": job_id, "status": "running", "slug": slug}
 
     except Exception as e:
-        import traceback
-        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+        import logging
+        logging.getLogger(__name__).error("Route error", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
 @router.post("/api/page/{slug}/smart-add")
@@ -90,8 +91,9 @@ async def smart_add(slug: str, request: Request):
         return {"jobId": job_id, "status": "running", "slug": slug}
 
     except Exception as e:
-        import traceback
-        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+        import logging
+        logging.getLogger(__name__).error("Route error", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
 @router.post("/api/page/{slug}/organize")
@@ -119,8 +121,9 @@ async def organize_existing(slug: str, request: Request):
         return {"jobId": job_id, "status": "running", "slug": slug}
 
     except Exception as e:
-        import traceback
-        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+        import logging
+        logging.getLogger(__name__).error("Route error", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
 @router.delete("/api/page/{slug}")

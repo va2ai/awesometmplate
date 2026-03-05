@@ -4,4 +4,12 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=3339, reload=True)
+    from app.config import ENV, PORT
+
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=PORT,
+        reload=(ENV == "dev"),
+        workers=1,
+    )

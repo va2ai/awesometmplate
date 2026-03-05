@@ -35,5 +35,6 @@ async def create_block_type_endpoint(request: Request):
         result = await create_new_block_type(description)
         return {"status": "ok", "block_type": result}
     except Exception as e:
-        import traceback
-        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+        import logging
+        logging.getLogger(__name__).error("Route error", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})

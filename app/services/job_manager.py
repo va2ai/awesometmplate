@@ -9,11 +9,15 @@ Jobs flow:
 
 import asyncio
 import json
-import traceback
+import logging
+import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.config import JOBS_DIR
+
+logger = logging.getLogger(__name__)
+_file_lock = threading.Lock()
 
 
 def _job_path(job_id: str):
@@ -36,6 +40,7 @@ def create_job(job_type: str, slug: str = "", topic: str = "", meta: dict = None
         "result": None,
     }
     _save_job(job)
+    logger.info("Job created: id=%s type=%s topic=%r", job_id, job_type, topic)
     return job_id
 
 
@@ -61,6 +66,7 @@ def complete_job(job_id: str, result: dict = None, slug: str = None):
     if slug is not None:
         job["slug"] = slug
     _save_job(job)
+    logger.info("Job completed: id=%s topic=%r", job_id, job.get("topic", ""))
 
 
 def fail_job(job_id: str, error: str):
@@ -72,6 +78,7 @@ def fail_job(job_id: str, error: str):
     job["completed_at"] = datetime.now().isoformat()
     job["error"] = error
     _save_job(job)
+    logger.error("Job failed: id=%s error=%s", job_id, error[:200])
 
 
 def list_jobs(limit: int = 20) -> list[dict]:
@@ -90,8 +97,8 @@ def list_jobs(limit: int = 20) -> list[dict]:
 
 def cleanup_old_jobs(max_age_hours: int = 24):
     """Remove jobs older than max_age_hours."""
-    from datetime import timedelta
     cutoff = datetime.now() - timedelta(hours=max_age_hours)
+    removed = 0
     for path in JOBS_DIR.glob("*.json"):
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -99,14 +106,38 @@ def cleanup_old_jobs(max_age_hours: int = 24):
             created = datetime.fromisoformat(job["created_at"])
             if created < cutoff:
                 path.unlink()
+                removed += 1
         except (json.JSONDecodeError, OSError, KeyError, ValueError):
             continue
+    if removed:
+        logger.info("Cleaned up %d old jobs", removed)
+
+
+def recover_stuck_jobs():
+    """Mark any 'running' jobs as failed (called on startup after restart)."""
+    recovered = 0
+    for path in JOBS_DIR.glob("*.json"):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                job = json.load(f)
+            if job.get("status") == "running":
+                job["status"] = "failed"
+                job["completed_at"] = datetime.now().isoformat()
+                job["error"] = "Server restarted while job was running"
+                _save_job(job)
+                recovered += 1
+        except (json.JSONDecodeError, OSError):
+            continue
+    if recovered:
+        logger.warning("Recovered %d stuck jobs on startup", recovered)
 
 
 def _save_job(job: dict):
     JOBS_DIR.mkdir(exist_ok=True)
-    with open(_job_path(job["id"]), "w", encoding="utf-8") as f:
-        json.dump(job, f, indent=2, ensure_ascii=False)
+    path = _job_path(job["id"])
+    with _file_lock:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(job, f, indent=2, ensure_ascii=False)
 
 
 def run_job_in_background(job_id: str, coro):
@@ -120,4 +151,5 @@ async def _run_wrapper(job_id: str, coro):
     try:
         await coro
     except Exception as e:
-        fail_job(job_id, f"{repr(e)}\n{traceback.format_exc()}")
+        logger.error("Background job %s failed: %s", job_id, repr(e), exc_info=True)
+        fail_job(job_id, repr(e))

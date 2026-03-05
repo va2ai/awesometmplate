@@ -114,5 +114,6 @@ async def add_topic_global(request: Request):
         return {"jobId": job_id, "status": "running", "topic": topic}
 
     except Exception as e:
-        import traceback
-        return JSONResponse(status_code=500, content={"error": repr(e), "traceback": traceback.format_exc()})
+        import logging
+        logging.getLogger(__name__).error("add_topic_global failed", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
