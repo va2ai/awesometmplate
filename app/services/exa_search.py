@@ -8,30 +8,38 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+# Lazy-initialized async client
+_exa_client = None
 
-def _sync_exa_search(api_key: str, query: str, num_results: int, max_chars: int):
-    """Run Exa search synchronously (called via asyncio.to_thread)."""
-    from exa_py import Exa
-    exa = Exa(api_key=api_key)
-    return exa.search_and_contents(
-        query,
-        type="auto",
-        num_results=num_results,
-        text={"max_characters": max_chars},
-    )
+
+def _get_exa_client():
+    """Get or create the AsyncExa client."""
+    global _exa_client
+    load_dotenv(override=True)
+    api_key = os.getenv("EXA_API_KEY", "")
+    if not api_key:
+        return None
+    if _exa_client is None:
+        from exa_py import AsyncExa
+        _exa_client = AsyncExa(api_key=api_key)
+    return _exa_client
 
 
 async def search_exa(query: str, num_results: int = 8, max_chars: int = 10000) -> str:
     """Search Exa for real web content. Returns formatted text for Claude context."""
-    load_dotenv(override=True)
-    api_key = os.getenv("EXA_API_KEY", "")
-    if not api_key:
+    client = _get_exa_client()
+    if not client:
         return ""
 
     try:
         logger.info("Exa search: query=%r num_results=%d", query, num_results)
         results = await asyncio.wait_for(
-            asyncio.to_thread(_sync_exa_search, api_key, query, num_results, max_chars),
+            client.search_and_contents(
+                query,
+                type="auto",
+                num_results=num_results,
+                text={"max_characters": max_chars},
+            ),
             timeout=30.0,
         )
 
