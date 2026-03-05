@@ -2,27 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Awesome KB">
+  <meta name="theme-color" content="#111827">
   <title>{{ config.title }} - Awesome Knowledge Base</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; }
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .page-card { -webkit-tap-highlight-color: transparent; }
     .page-card:hover { transform: translateY(-4px); }
+    @media (hover: none) { .page-card:hover { transform: none; } .page-card:active { transform: scale(0.98); } }
     @keyframes spin-slow { to { transform: rotate(360deg); } }
     .loading-spin { animation: spin-slow 1s linear infinite; }
+    .safe-bottom { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
   <!-- NAV -->
   <header class="bg-gray-900 text-white border-b-4 border-black">
-    <nav class="mx-auto max-w-7xl px-6 lg:px-0">
-      <div class="flex h-16 items-center justify-between">
-        <a href="/" class="font-black text-lg tracking-tight">Awesome KB</a>
-        <div class="flex items-center gap-3">
-          <button onclick="toggleTokenPanel()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 text-xs font-bold border border-white/20 transition-colors flex items-center gap-1.5">
+    <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-0">
+      <div class="flex h-14 sm:h-16 items-center justify-between">
+        <a href="/" class="font-black text-base sm:text-lg tracking-tight">Awesome KB</a>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button onclick="toggleTokenPanel()" class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-2.5 sm:px-3 py-1.5 text-xs font-bold border border-white/20 transition-colors flex items-center gap-1.5">
             <iconify-icon icon="ph:coins-bold"></iconify-icon>
             <span id="navTokenCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</span>
           </button>
@@ -32,8 +44,8 @@
   </header>
 
   <!-- TOKEN PANEL -->
-  <div id="tokenPanel" class="fixed top-14 right-6 z-[60] hidden">
-    <div class="bg-white border-2 border-black shadow-lg w-72">
+  <div id="tokenPanel" class="fixed top-12 sm:top-14 right-2 sm:right-6 z-[60] hidden">
+    <div class="bg-white border-2 border-black shadow-lg w-64 sm:w-72">
       <div class="bg-gray-900 text-white px-4 py-2 border-b-2 border-black flex items-center justify-between">
         <span class="font-bold text-sm flex items-center gap-1.5">
           <iconify-icon icon="ph:chart-bar-bold"></iconify-icon> Token Usage
@@ -62,10 +74,10 @@
   </div>
 
   <!-- HERO -->
-  <header class="bg-gray-900 text-white pb-16 pt-12">
-    <div class="max-w-7xl mx-auto text-center px-6">
-      <h1 class="text-5xl md:text-7xl font-black tracking-tighter mb-4">{{ config.title }}</h1>
-      <p class="text-lg text-gray-400 max-w-2xl mx-auto mb-8">{{ config.subtitle }}</p>
+  <header class="bg-gray-900 text-white pb-10 sm:pb-16 pt-8 sm:pt-12">
+    <div class="max-w-7xl mx-auto text-center px-4 sm:px-6">
+      <h1 class="text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-3 sm:mb-4">{{ config.title }}</h1>
+      <p class="text-sm sm:text-lg text-gray-400 max-w-2xl mx-auto mb-6 sm:mb-8">{{ config.subtitle }}</p>
 
       <!-- SINGLE INPUT -->
       <div class="max-w-2xl mx-auto">
@@ -74,13 +86,15 @@
                ondragleave="this.classList.remove('border-violet-400')"
                ondrop="event.preventDefault(); this.classList.remove('border-violet-400'); handleHomeFiles(event.dataTransfer.files)">
           <div class="flex gap-0">
-            <input id="globalTopic" type="text" placeholder="Topic, URL, or drop files here... AI routes it automatically"
-                   class="flex-1 px-4 py-3 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-violet-400"
+            <input id="globalTopic" type="text" placeholder="Topic, URL, or drop files..."
+                   class="flex-1 min-w-0 px-3 sm:px-4 py-3 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-violet-400"
+                   enterkeyhint="go"
+                   autocapitalize="sentences"
                    onkeydown="if(event.key==='Enter'){event.preventDefault(); doGlobalAdd()}"
                    onclick="event.stopPropagation()">
             <button onclick="event.preventDefault(); event.stopPropagation(); doGlobalAdd()" id="globalAddBtn"
-                    class="bg-violet-500 hover:bg-violet-600 text-white px-6 py-3 font-bold text-sm transition-colors flex items-center gap-2">
-              <iconify-icon icon="ph:brain-bold"></iconify-icon> Add
+                    class="bg-violet-500 hover:bg-violet-600 active:bg-violet-700 text-white px-4 sm:px-6 py-3 font-bold text-sm transition-colors flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <iconify-icon icon="ph:brain-bold"></iconify-icon> <span class="hidden sm:inline">Add</span>
             </button>
           </div>
           <input id="globalFile" type="file" multiple accept=".txt,.md,.json,.csv,.html,.py,.js,.ts,.pdf,.xml,.yaml,.yml,.toml,.log,.rst,.tex" class="hidden" onchange="handleHomeFiles(this.files)">
@@ -89,7 +103,7 @@
         <!-- FILE PREVIEW -->
         <div id="homeFileList" class="mt-2 space-y-1"></div>
 
-        <p class="text-xs text-gray-500 mt-2">Type a topic, paste a URL, or drop files -- Claude routes everything to the right page</p>
+        <p class="text-[10px] sm:text-xs text-gray-500 mt-2">Type a topic, paste a URL, or drop files -- Claude routes everything to the right page</p>
       </div>
     </div>
   </header>
@@ -106,11 +120,11 @@
   </div>
 
   <!-- JOBS PANEL -->
-  <div id="jobsPanel" class="fixed bottom-6 right-6 z-[200] space-y-2 hidden"></div>
+  <div id="jobsPanel" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-[200] space-y-2 hidden"></div>
 
   <!-- PAGE CARDS -->
-  <main class="max-w-7xl mx-auto px-6 xl:px-0 -mt-8 flex-1">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 xl:px-0 -mt-6 sm:-mt-8 flex-1">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
       {% for page in config.pages %}
       <a href="/page/{{ page.slug }}" class="page-card bg-white border-2 border-black hover:shadow-xl transition-all duration-200 group">
         <div class="bg-{{ page.color }}-500 px-5 py-4 border-b-2 border-black">
@@ -136,11 +150,11 @@
   </main>
 
   <!-- FOOTER -->
-  <footer class="bg-white border-t-2 border-black mt-20">
-    <div class="max-w-7xl mx-auto px-6 lg:px-0 py-8">
-      <div class="flex items-center justify-between text-sm text-gray-500">
+  <footer class="bg-white border-t-2 border-black mt-12 sm:mt-20 safe-bottom">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-0 py-6 sm:py-8">
+      <div class="flex flex-col sm:flex-row items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500 text-center sm:text-left">
         <span>Powered by Claude AI &bull; Built with FastAPI</span>
-        <span>Total Cost: ${{ "%.4f"|format(tokens.total_cost_usd) }} ({{ tokens.calls }} calls)</span>
+        <span>Cost: ${{ "%.4f"|format(tokens.total_cost_usd) }} ({{ tokens.calls }} calls)</span>
       </div>
     </div>
   </footer>
@@ -205,7 +219,7 @@
       jobs.forEach(function(j) {
         var div = document.createElement('div');
         div.id = 'job-toast-' + j.jobId;
-        div.className = 'bg-gray-900 text-white border-2 border-black shadow-xl px-4 py-3 flex items-center gap-3 max-w-sm';
+        div.className = 'bg-gray-900 text-white border-2 border-black shadow-xl px-3 sm:px-4 py-3 flex items-center gap-3 w-full sm:max-w-sm';
         var icon = document.createElement('iconify-icon');
         icon.setAttribute('icon', 'ph:circle-notch-bold');
         icon.setAttribute('width', '18');

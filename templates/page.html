@@ -2,13 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#8b5cf6">
   <title>{{ page.title }} - Awesome Knowledge Base</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; }
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      padding-top: env(safe-area-inset-top);
+    }
     .line-clamp-2 {
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -22,22 +29,30 @@
     @keyframes spin-slow { to { transform: rotate(360deg); } }
     .loading-spin { animation: spin-slow 1s linear infinite; }
     .detail-desc { white-space: pre-line; }
+    .safe-bottom { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+    .scroll-snap-x { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .scroll-snap-x::-webkit-scrollbar { display: none; }
+    .scroll-snap-x > * { scroll-snap-align: start; }
+    @media (hover: none) { .page-card:active { transform: scale(0.98); } }
+    /* Mobile bottom bar */
+    .mobile-action-bar { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
   <!-- FIXED NAV -->
   <header id="navbar" class="fixed left-0 right-0 z-50 backdrop-blur-md border-b transition-all duration-300 bg-{{ page.color }}-500/90 border-{{ page.color }}-600/40 shadow-sm">
-    <nav class="mx-auto max-w-7xl px-6 lg:px-0">
-      <div class="flex h-16 lg:h-14 items-center justify-between">
-        <div class="flex items-center gap-3">
-          <a href="/" class="text-white/70 hover:text-white transition-colors flex items-center gap-1 text-sm font-bold">
-            <iconify-icon icon="ph:house-bold"></iconify-icon> Home
+    <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-0">
+      <div class="flex h-14 sm:h-16 lg:h-14 items-center justify-between">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+          <a href="/" class="text-white/70 hover:text-white active:text-white transition-colors flex items-center gap-1 text-sm font-bold flex-shrink-0">
+            <iconify-icon icon="ph:house-bold"></iconify-icon><span class="hidden sm:inline"> Home</span>
           </a>
           <span class="text-white/40">/</span>
-          <span class="font-black text-white text-lg tracking-tight">{{ page.title }}</span>
+          <span class="font-black text-white text-base sm:text-lg tracking-tight truncate">{{ page.title }}</span>
         </div>
-        <div class="flex items-center gap-3">
+        <!-- Desktop actions -->
+        <div class="hidden sm:flex items-center gap-3">
           <button onclick="toggleTokenPanel()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 text-xs font-bold border border-white/20 transition-colors flex items-center gap-1.5" title="Token Usage">
             <iconify-icon icon="ph:coins-bold"></iconify-icon>
             <span id="navTokenCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</span>
@@ -49,13 +64,31 @@
             <iconify-icon icon="ph:brain-bold" class="mr-1"></iconify-icon> Smart Add
           </button>
         </div>
+        <!-- Mobile token button -->
+        <div class="flex sm:hidden items-center gap-2">
+          <button onclick="toggleTokenPanel()" class="bg-white/10 active:bg-white/30 text-white p-2 text-xs font-bold border border-white/20">
+            <iconify-icon icon="ph:coins-bold" width="16"></iconify-icon>
+          </button>
+        </div>
       </div>
     </nav>
   </header>
 
+  <!-- MOBILE BOTTOM ACTION BAR -->
+  <div class="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-gray-900 border-t-2 border-black mobile-action-bar">
+    <div class="flex gap-0">
+      <button onclick="openResearchModal()" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800 border-r border-gray-700">
+        <iconify-icon icon="ph:magnifying-glass-bold" width="16"></iconify-icon> Research
+      </button>
+      <button onclick="openAddModal()" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800 bg-{{ page.color }}-600">
+        <iconify-icon icon="ph:brain-bold" width="16"></iconify-icon> Smart Add
+      </button>
+    </div>
+  </div>
+
   <!-- TOKEN PANEL (slide-down) -->
-  <div id="tokenPanel" class="fixed top-14 right-6 z-[60] hidden">
-    <div class="bg-white border-2 border-black shadow-lg w-72">
+  <div id="tokenPanel" class="fixed top-12 sm:top-14 right-2 sm:right-6 z-[60] hidden">
+    <div class="bg-white border-2 border-black shadow-lg w-64 sm:w-72">
       <div class="bg-gray-900 text-white px-4 py-2 border-b-2 border-black flex items-center justify-between">
         <span class="font-bold text-sm flex items-center gap-1.5">
           <iconify-icon icon="ph:chart-bar-bold"></iconify-icon> Token Usage
@@ -85,19 +118,20 @@
   </div>
 
   <!-- HERO -->
-  <header class="bg-{{ page.color }}-500 text-white p-6 pt-32 pb-16">
+  <header class="bg-{{ page.color }}-500 text-white px-4 sm:p-6 pt-20 sm:pt-32 pb-10 sm:pb-16">
     <div class="max-w-7xl mx-auto text-center relative">
-      <div class="mb-4">
-        <iconify-icon icon="ph:{{ page.icon.replace('i-ph:', '') }}" width="48" class="text-white/70"></iconify-icon>
+      <div class="mb-3 sm:mb-4">
+        <iconify-icon icon="ph:{{ page.icon.replace('i-ph:', '') }}" width="36" class="sm:hidden text-white/70"></iconify-icon>
+        <iconify-icon icon="ph:{{ page.icon.replace('i-ph:', '') }}" width="48" class="hidden sm:inline text-white/70"></iconify-icon>
       </div>
-      <h1 class="text-5xl md:text-7xl font-black tracking-tighter mb-4">{{ directory.title }}</h1>
-      <p class="text-lg text-{{ page.color }}-100 max-w-2xl mx-auto mb-8">{{ directory.subtitle or page.subtitle or "Curated resources organized by Claude AI" }}</p>
+      <h1 class="text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-3 sm:mb-4">{{ directory.title }}</h1>
+      <p class="text-sm sm:text-lg text-{{ page.color }}-100 max-w-2xl mx-auto mb-6 sm:mb-8">{{ directory.subtitle or page.subtitle or "Curated resources organized by Claude AI" }}</p>
 
       {% if directory.sections %}
-      <div class="flex flex-wrap justify-center gap-2">
+      <div class="scroll-snap-x flex sm:flex-wrap sm:justify-center gap-2 -mx-4 px-4 sm:mx-0 sm:px-0 pb-2">
         {% for section in directory.sections %}
         <button onclick="scrollToSection('section-{{ loop.index0 }}')"
-                class="px-4 py-3 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold transition-colors border border-white/20">
+                class="px-3 sm:px-4 py-2.5 sm:py-3 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white text-xs sm:text-sm font-semibold transition-colors border border-white/20 whitespace-nowrap flex-shrink-0 sm:flex-shrink">
           {{ section.title }}
         </button>
         {% endfor %}
@@ -115,7 +149,7 @@
   </header>
 
   <!-- MAIN CONTENT -->
-  <main class="max-w-7xl mx-auto px-6 xl:px-0 py-8 relative flex-1">
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 xl:px-0 py-6 sm:py-8 pb-20 sm:pb-8 relative flex-1">
     {% for section in directory.sections %}
     <div id="section-{{ loop.index0 }}" class="mb-12 relative z-10">
 
@@ -160,7 +194,7 @@
 
         <!-- CODE GRID -->
         {% if block.type == "code_grid" %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
           {% for card in block.content.get("cards", []) %}
           <div class="bg-white border-2 border-black hover:shadow-lg transition-shadow">
             <div class="p-3 border-b border-gray-200">
@@ -219,7 +253,7 @@
 
         <!-- INFO GRID -->
         {% elif block.type == "info_grid" %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
           {% for card in block.content.get("cards", []) %}
           <div class="bg-white border-2 border-black p-4 hover:shadow-lg transition-shadow">
             <div class="flex items-start gap-3">
@@ -239,7 +273,7 @@
 
         <!-- COMPARISON -->
         {% elif block.type == "comparison" %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
           {% for item in block.content.get("items", []) %}
           <div class="bg-white border-2 border-black">
             <div class="px-4 py-2 border-b-2 border-black bg-gray-50">
@@ -263,9 +297,9 @@
 
         <!-- STATS -->
         {% elif block.type == "stats" %}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {% for card in block.content.get("cards", []) %}
-          <div class="bg-white border-2 border-black p-4 text-center hover:shadow-lg transition-shadow">
+          <div class="bg-white border-2 border-black p-3 sm:p-4 text-center hover:shadow-lg transition-shadow">
             <div class="text-2xl font-black text-{{ section.color or 'orange' }}-600">{{ card.get("value", "") }}</div>
             <div class="text-xs font-bold text-gray-800 mt-1">{{ card.get("label", "") }}</div>
             {% if card.get("description") %}
@@ -442,7 +476,7 @@
 
       <!-- Fallback: old-style detail_cards if present -->
       {% if section.detail_cards is defined and section.detail_cards %}
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {% for card in section.detail_cards %}
         <div class="bg-white border-2 border-black hover:shadow-lg transition-shadow">
           <div class="p-3 border-b border-gray-200">
@@ -498,9 +532,9 @@
   </main>
 
   <!-- FOOTER -->
-  <footer class="bg-white border-t-2 border-black mt-16">
-    <div class="max-w-7xl mx-auto px-6 lg:px-0 py-10">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
+  <footer class="bg-white border-t-2 border-black mt-10 sm:mt-16 mb-14 sm:mb-0 safe-bottom">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-0 py-8 sm:py-10">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 mb-8">
         <div>
           <h3 class="font-black text-lg mb-2">{{ page.title }}</h3>
           <p class="text-sm text-gray-600">Organize and display any collection of resources using Claude AI. Inspired by awesomeclaude.ai.</p>
@@ -531,9 +565,9 @@
   <!-- RESEARCH MODAL -->
   <div id="researchModal" class="fixed inset-0 z-[100] hidden">
     <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
-    <div class="absolute inset-0 flex items-center justify-center p-4">
-      <div class="bg-white border-2 border-black w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
-        <div class="bg-{{ page.color }}-500 text-white px-4 py-3 border-b-2 border-black sticky top-0 z-10">
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center sm:p-4">
+      <div class="bg-white border-2 border-black w-full sm:max-w-lg relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-none safe-bottom">
+        <div class="bg-{{ page.color }}-500 text-white px-4 py-3 border-b-2 border-black sticky top-0 z-10 rounded-t-2xl sm:rounded-none">
           <h2 class="font-black flex items-center gap-2">
             <iconify-icon icon="ph:magnifying-glass-bold"></iconify-icon>
             Research a Topic
@@ -596,9 +630,9 @@
   <!-- SMART ADD MODAL -->
   <div id="addModal" class="fixed inset-0 z-[100] hidden">
     <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
-    <div class="absolute inset-0 flex items-center justify-center p-4">
-      <div class="bg-white border-2 border-black w-full max-w-lg relative">
-        <div class="bg-violet-600 text-white px-4 py-3 border-b-2 border-black">
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center sm:p-4">
+      <div class="bg-white border-2 border-black w-full sm:max-w-lg relative rounded-t-2xl sm:rounded-none safe-bottom">
+        <div class="bg-violet-600 text-white px-4 py-3 border-b-2 border-black rounded-t-2xl sm:rounded-none">
           <h2 class="font-black flex items-center gap-2">
             <iconify-icon icon="ph:brain-bold"></iconify-icon>
             Smart Add
