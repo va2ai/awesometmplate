@@ -17,7 +17,7 @@ DYNAMICALLY choose the best block types to present each section's content:
 - timeline: For chronological events, version history, roadmaps. Events with date + title.
 - alert: For warnings, errors, success messages, important notices. Text + severity level.
 - badges: For tags, labels, technology stacks, categories. Items with label + color.
-- checklist: For task lists, requirements, feature checklists. Items with text + checked state.
+- checklist: For task lists, requirements, feature checklists. Items with text. ALWAYS set checked=false -- users check boxes themselves.
 
 For each major item, create a SECTION with 3-6 blocks using the most appropriate types.
 Mix block types within a section to create a rich cheatsheet-style layout.
