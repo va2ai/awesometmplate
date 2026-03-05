@@ -41,17 +41,57 @@ BLOCK TYPES (choose the most creative fit):
 - progress: For animated progress/completion bars. Content has "items" array with "label", "value" (current number), "max" (max number), "color" (Tailwind color). Great for skill levels, completion rates, survey results, market share. Use creatively for any ranked/scored data.
 - accordion: For collapsible FAQ-style or detail sections. Content has "items" array with "title" and "content". Use when content is long and users want to expand/collapse sections.
 - tabs: For tabbed content panels. Content has "tabs" array with "label" and "content". Use when showing multiple related views of the same topic (e.g., different languages, OS-specific instructions, before/after).
-- animated_cards: For visually striking card grids with entrance animations powered by anime.js. Content has "animation" (one of: "stagger-up", "flip", "scale-bounce", "slide-left", "fade-scale") and "cards" array. Each card can have: "title" (required), "description", "icon" (Phosphor icon name), "subtitle" (small colored label), "color" (Tailwind color override), "image_gradient" (true for a colored header banner), "badge" (overlay text on gradient), "stats" (array of {value, label} for mini metrics at bottom), "tags" (array of tag strings). USE THIS when content deserves a dramatic visual entrance -- product showcases, team profiles, feature highlights, tool comparisons, award winners, portfolio items. Pick the animation that fits: "flip" for reveals/surprises, "scale-bounce" for playful/fun content, "slide-left" for sequential/process items, "stagger-up" for general use, "fade-scale" for elegant/subtle.
+- animated_cards: For visually striking card grids with entrance animations powered by anime.js. Content has "animation" (one of: "stagger-up", "flip", "scale-bounce", "slide-left", "fade-scale"), "layout" (one of: "grid", "featured", "horizontal"), and "cards" array. Each card has: "title" (required), "description", "icon" (Phosphor icon name), "subtitle" (small colored label), "color" (Tailwind color override), "image_gradient" (true for colored header banner), "badge" (overlay text on gradient), "stats" (array of {value, label} for mini metrics), "tags" (array of tag strings).
+  THEMING animated_cards by topic:
+  - Tech/programming: use "flip" animation, blue/violet/indigo colors, terminal/code/gear icons, tags for languages/frameworks, stats for GitHub stars/downloads
+  - People/teams/bios: use "fade-scale" animation, warm colors, gradient headers with person icons, subtitle for role/title, stats for achievements
+  - Food/cooking/recipes: use "scale-bounce" animation, warm orange/amber/red colors, food-related icons, badge for difficulty/time, tags for dietary info
+  - History/events: use "slide-left" animation, amber/stone/slate colors, vintage feel, subtitle for dates/eras, badge for significance
+  - Science/space: use "stagger-up" animation, indigo/cyan/violet colors, science icons, stats for measurements/distances
+  - Business/products: use "flip" animation, gradient headers, badge for pricing/rating, stats for metrics, professional color scheme
+  - Games/entertainment: use "scale-bounce" animation, vibrant pink/purple/yellow colors, playful icons, badge for genre/rating
+  - Health/medical: use "fade-scale" animation, green/teal/blue colors, medical icons, stats for clinical data
+  ALWAYS theme the animation style, colors, icons, and card structure to match the SPECIFIC topic. Never use generic defaults.
 
-AVAILABLE JS LIBRARIES (loaded via CDN, use freely in custom blocks):
-- anime.js (v3.2.2): Powerful animation library. Use anime({targets, translateY, opacity, scale, rotateY, delay: anime.stagger(100), duration, easing}) for entrance animations, hover effects, and interactive transitions. Easing options: 'easeOutQuart', 'easeOutExpo', 'easeOutBack', 'easeOutBounce', 'easeOutElastic'.
-- Chart.js (v4): For data visualization (already used by chart block type).
+AVAILABLE JS LIBRARIES (all loaded via CDN, use freely in custom blocks):
+- anime.js (v3.2.2): Animation powerhouse. anime({targets, translateY, opacity, scale, rotateY, rotate, translateX, delay: anime.stagger(100), duration, easing}). Easings: 'easeOutQuart', 'easeOutExpo', 'easeOutBack', 'easeOutBounce', 'easeOutElastic'. Use for entrance animations, morphing, path animations, staggered reveals. Trigger with IntersectionObserver.
+- Chart.js (v4): Data visualization -- bar, line, pie, doughnut, radar, polar area charts.
+- canvas-confetti: Celebration effects! confetti({particleCount:100, spread:70, origin:{y:0.6}}). Use on achievement cards, milestones, winners, celebrations. Call on click or on scroll-reveal.
+- Typed.js: Typewriter text effect. new Typed('#element', {strings:['First','Second'], typeSpeed:50, backSpeed:30, loop:true}). Use for hero text, key quotes, dramatic reveals, definitions.
+- CountUp.js: Animated number counting. new countUp.CountUp('element', targetNumber, {duration:2, separator:','}).start(). Use for stats that should animate from 0 to their value -- revenue, users, metrics, scores.
+- vanilla-tilt: 3D tilt/parallax on hover. VanillaTilt.init(element, {max:15, speed:400, glare:true, 'max-glare':0.3}). Use for product cards, profile cards, featured items -- gives a premium interactive feel.
+- particles.js: Animated particle backgrounds. particlesJS('container-id', config). Use sparingly for hero-style custom blocks -- starfields for space topics, snow for winter, bubbles for ocean, fireflies for nature.
+
+LIBRARY USAGE GUIDE FOR CUSTOM BLOCKS:
+- ALWAYS wrap animations in IntersectionObserver so they trigger on scroll, not on page load
+- Use unique IDs for each block instance (combine section index + block index)
+- CountUp is perfect paired with stats blocks -- make numbers count up dramatically
+- VanillaTilt on animated_cards makes them feel premium and interactive
+- Typed.js works great for custom "hero quote" blocks or definition reveals
+- Confetti should be rare and purposeful -- celebration moments, not every page
+- Particles.js should be used VERY sparingly -- only for truly immersive custom blocks
+
+DYNAMIC CUSTOM ANIMATED BLOCKS:
+When a topic calls for something truly unique that animated_cards can't capture, create a CUSTOM block type with anime.js animations tailored to the content. Examples:
+- A "solar_system" topic could get a custom block with orbiting planet cards that animate in circular paths
+- A "music" topic could get cards that bounce in like piano keys with staggered timing
+- A "stock_market" topic could get cards that slide up like rising tickers with number counting animations
+- A "recipe" topic could get ingredient cards that flip like recipe cards being dealt
+The custom block HTML template has full access to anime.js, Tailwind CSS, Phosphor icons, and IntersectionObserver. Be bold and inventive -- make each page feel like it was hand-designed for its specific topic.
+
+THEMING RULES:
+1. EVERY page should feel visually themed to its topic. A page about space should FEEL cosmic. A page about cooking should FEEL warm and appetizing.
+2. Choose section colors that match the topic mood (red for urgent/war, blue for tech/science, green for nature/health, orange for energy/food, violet for creative/space).
+3. Pick icons that are SPECIFIC to the topic, not generic. For a coffee topic use coffee-bold not star-bold.
+4. animated_cards should appear at least once per topic -- they are the visual highlight.
+5. Match animation style to content energy: bouncy for fun topics, smooth for professional, dramatic flips for reveals.
 
 IMPORTANT: Only use code_grid when the content is ACTUAL CODE (programming languages, shell commands, config files). For legal text, descriptions, definitions, or any non-code content use info_grid, text, table, or other appropriate types instead.
 
 For each major item, create a SECTION with 4-7 blocks using DIVERSE block types.
 NEVER use the same block type twice in a row within a section.
 Every section must use at least 3 DIFFERENT block types. Aim for maximum visual variety.
+Every section SHOULD include at least one animated or interactive block (animated_cards, chart, progress, accordion, tabs, or custom).
 
 Keep code examples under 15 lines. Use real, accurate information with specific details and numbers.
 

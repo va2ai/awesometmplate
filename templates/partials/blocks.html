@@ -398,14 +398,170 @@
   {% elif block.type == "animated_cards" %}
   {% set anim_id = "anim-" ~ section_loop_idx ~ "-" ~ loop.index0 %}
   {% set animation = block.content.get("animation", "stagger-up") %}
+  {% set layout = block.content.get("layout", "grid") %}
+  {% if layout == "featured" %}
+  {# Featured layout: first card large, rest in grid below #}
+  <div class="mb-6" id="{{ anim_id }}">
+    {% for card in block.content.get("cards", []) %}
+    {% set card_color = card.get("color", section.color or "orange") %}
+    {% if loop.first %}
+    <div class="anim-card bg-white border-2 border-black overflow-hidden opacity-0 mb-4
+                hover:shadow-xl transition-shadow duration-300 cursor-default
+                {% if layout == 'featured' %}sm:flex{% endif %}">
+      {% if card.get("image_gradient") %}
+      <div class="sm:w-2/5 h-32 sm:h-auto bg-gradient-to-br from-{{ card_color }}-400 to-{{ card_color }}-600 flex items-center justify-center border-b-2 sm:border-b-0 sm:border-r-2 border-black relative">
+        {% if card.get("icon") %}
+        <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="56" class="text-white/80"></iconify-icon>
+        {% endif %}
+        {% if card.get("badge") %}
+        <span class="absolute top-3 right-3 bg-black/30 text-white text-xs font-bold px-2.5 py-1 backdrop-blur-sm">{{ card.get("badge") }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="p-5 sm:flex-1">
+        {% if card.get("icon") and not card.get("image_gradient") %}
+        <div class="w-12 h-12 bg-{{ card_color }}-100 border-2 border-{{ card_color }}-300 flex items-center justify-center mb-3">
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="24" class="text-{{ card_color }}-600"></iconify-icon>
+        </div>
+        {% endif %}
+        <h3 class="text-lg font-black text-gray-900 mb-1">{{ card.get("title", "") }}</h3>
+        {% if card.get("subtitle") %}
+        <p class="text-xs font-bold text-{{ card_color }}-600 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+        {% endif %}
+        {% if card.get("description") %}
+        <p class="text-sm text-gray-600 leading-relaxed">{{ card.get("description", "") }}</p>
+        {% endif %}
+        {% if card.get("stats") %}
+        <div class="flex gap-4 mt-4 pt-3 border-t border-gray-100">
+          {% for stat in card.get("stats", []) %}
+          <div class="text-center">
+            <div class="text-lg font-black text-{{ card_color }}-600">{{ stat.get("value", "") }}</div>
+            <div class="text-[10px] text-gray-500">{{ stat.get("label", "") }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.get("tags") %}
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          {% for tag in card.get("tags", []) %}
+          <span class="text-[10px] font-bold bg-{{ card_color }}-100 text-{{ card_color }}-700 px-2 py-0.5">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    {% if loop.index == 2 %}<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{% endif %}
+    <div class="anim-card bg-white border-2 border-black overflow-hidden opacity-0
+                hover:shadow-xl transition-shadow duration-300 cursor-default">
+      {% if card.get("image_gradient") %}
+      <div class="h-20 bg-gradient-to-br from-{{ card_color }}-400 to-{{ card_color }}-600 flex items-center justify-center border-b-2 border-black relative">
+        {% if card.get("icon") %}
+        <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="32" class="text-white/80"></iconify-icon>
+        {% endif %}
+        {% if card.get("badge") %}
+        <span class="absolute top-2 right-2 bg-black/30 text-white text-[10px] font-bold px-2 py-0.5 backdrop-blur-sm">{{ card.get("badge") }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="p-4">
+        {% if card.get("icon") and not card.get("image_gradient") %}
+        <div class="w-10 h-10 bg-{{ card_color }}-100 border-2 border-{{ card_color }}-300 flex items-center justify-center mb-3">
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-{{ card_color }}-600"></iconify-icon>
+        </div>
+        {% endif %}
+        <h3 class="text-sm font-black text-gray-900 mb-1">{{ card.get("title", "") }}</h3>
+        {% if card.get("subtitle") %}
+        <p class="text-[11px] font-bold text-{{ card_color }}-600 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+        {% endif %}
+        {% if card.get("description") %}
+        <p class="text-xs text-gray-600 leading-relaxed">{{ card.get("description", "") }}</p>
+        {% endif %}
+        {% if card.get("stats") %}
+        <div class="flex gap-3 mt-3 pt-3 border-t border-gray-100">
+          {% for stat in card.get("stats", []) %}
+          <div class="text-center flex-1">
+            <div class="text-sm font-black text-{{ card_color }}-600">{{ stat.get("value", "") }}</div>
+            <div class="text-[10px] text-gray-500">{{ stat.get("label", "") }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.get("tags") %}
+        <div class="flex flex-wrap gap-1 mt-3">
+          {% for tag in card.get("tags", []) %}
+          <span class="text-[10px] font-bold bg-{{ card_color }}-100 text-{{ card_color }}-700 px-1.5 py-0.5">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% if loop.last %}</div>{% endif %}
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% elif layout == "horizontal" %}
+  {# Horizontal scrolling layout #}
+  <div class="mb-6 -mx-4 px-4" id="{{ anim_id }}">
+    <div class="flex gap-4 overflow-x-auto pb-3 scroll-snap-x">
+      {% for card in block.content.get("cards", []) %}
+      {% set card_color = card.get("color", section.color or "orange") %}
+      <div class="anim-card flex-shrink-0 w-64 sm:w-72 bg-white border-2 border-black overflow-hidden opacity-0
+                  hover:shadow-xl transition-shadow duration-300 cursor-default scroll-snap-align-start">
+        {% if card.get("image_gradient") %}
+        <div class="h-24 bg-gradient-to-br from-{{ card_color }}-400 to-{{ card_color }}-600 flex items-center justify-center border-b-2 border-black relative">
+          {% if card.get("icon") %}
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="40" class="text-white/80"></iconify-icon>
+          {% endif %}
+          {% if card.get("badge") %}
+          <span class="absolute top-2 right-2 bg-black/30 text-white text-[10px] font-bold px-2 py-0.5 backdrop-blur-sm">{{ card.get("badge") }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+        <div class="p-4">
+          {% if card.get("icon") and not card.get("image_gradient") %}
+          <div class="w-10 h-10 bg-{{ card_color }}-100 border-2 border-{{ card_color }}-300 flex items-center justify-center mb-3">
+            <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-{{ card_color }}-600"></iconify-icon>
+          </div>
+          {% endif %}
+          <h3 class="text-sm font-black text-gray-900 mb-1">{{ card.get("title", "") }}</h3>
+          {% if card.get("subtitle") %}
+          <p class="text-[11px] font-bold text-{{ card_color }}-600 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+          {% endif %}
+          {% if card.get("description") %}
+          <p class="text-xs text-gray-600 leading-relaxed">{{ card.get("description", "") }}</p>
+          {% endif %}
+          {% if card.get("stats") %}
+          <div class="flex gap-3 mt-3 pt-3 border-t border-gray-100">
+            {% for stat in card.get("stats", []) %}
+            <div class="text-center flex-1">
+              <div class="text-sm font-black text-{{ card_color }}-600">{{ stat.get("value", "") }}</div>
+              <div class="text-[10px] text-gray-500">{{ stat.get("label", "") }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if card.get("tags") %}
+          <div class="flex flex-wrap gap-1 mt-3">
+            {% for tag in card.get("tags", []) %}
+            <span class="text-[10px] font-bold bg-{{ card_color }}-100 text-{{ card_color }}-700 px-1.5 py-0.5">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  {# Default grid layout #}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" id="{{ anim_id }}">
     {% for card in block.content.get("cards", []) %}
     {% set card_color = card.get("color", section.color or "orange") %}
-    <div class="anim-card bg-white border-2 border-black overflow-hidden opacity-0 translate-y-4
-                hover:shadow-xl transition-shadow duration-300 cursor-default
-                {% if animation == 'flip' %}[perspective:800px]{% endif %}">
+    <div class="anim-card bg-white border-2 border-black overflow-hidden opacity-0
+                hover:shadow-xl transition-shadow duration-300 cursor-default">
       {% if card.get("image_gradient") %}
-      <div class="h-24 bg-gradient-to-br from-{{ card_color }}-400 to-{{ card_color }}-600 flex items-center justify-center border-b-2 border-black">
+      <div class="h-24 bg-gradient-to-br from-{{ card_color }}-400 to-{{ card_color }}-600 flex items-center justify-center border-b-2 border-black relative">
         {% if card.get("icon") %}
         <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="40" class="text-white/80"></iconify-icon>
         {% endif %}
@@ -448,6 +604,7 @@
     </div>
     {% endfor %}
   </div>
+  {% endif %}
   <script>
   (function(){
     var el = document.getElementById('{{ anim_id }}');

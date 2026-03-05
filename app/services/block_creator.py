@@ -178,8 +178,12 @@ The HTML template must:
 - Include Phosphor icons via <iconify-icon icon="ph:icon-name-bold">
 - Add hover effects, transitions (transition-all duration-200), and visual polish
 - Consider using CSS grid or flexbox for interesting layouts
-- You can use anime.js (loaded globally) for entrance animations: anime({targets: '.my-class', translateY: [30, 0], opacity: [0, 1], delay: anime.stagger(80), easing: 'easeOutQuart'})
-- Wrap anime.js calls in IntersectionObserver so they trigger on scroll-into-view
+- JS libraries available globally: anime.js (animations), canvas-confetti (celebrations), Typed.js (typewriter), CountUp.js (number animations), vanilla-tilt (3D hover), particles.js (backgrounds)
+- anime.js: anime({targets: '.cls', translateY: [30,0], opacity: [0,1], delay: anime.stagger(80), easing: 'easeOutQuart'})
+- CountUp: new countUp.CountUp('id', 1234, {duration:2}).start()
+- VanillaTilt: VanillaTilt.init(el, {max:15, speed:400, glare:true})
+- Typed: new Typed('#id', {strings:['text'], typeSpeed:50})
+- Wrap all animations in IntersectionObserver so they trigger on scroll-into-view
 
 Make the block feel SPECIAL -- it should be obvious this isn't a generic component. Add visual details like decorative borders, icon accents, color-coded elements, or creative spacing.
 
