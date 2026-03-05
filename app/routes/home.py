@@ -214,6 +214,7 @@ async def add_topic_global(request: Request):
         description = body.get("description", "").strip()
         url = body.get("url", "").strip()
         files = body.get("files", [])
+        depth = max(1, min(10, int(body.get("depth", 1))))
 
         if not topic and not url and not files:
             return JSONResponse(status_code=400, content={"error": "Topic, URL, or file is required"})
@@ -239,6 +240,7 @@ async def add_topic_global(request: Request):
             # Generate content for this topic
             new_dir = await organize_with_claude(
                 topic=topic, instructions=description or "", urls=urls, files=files,
+                depth=depth,
             )
 
             # Create topic slug and save

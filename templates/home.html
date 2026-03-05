@@ -130,6 +130,16 @@
           <input id="globalFile" type="file" multiple accept=".txt,.md,.json,.csv,.html,.py,.js,.ts,.pdf,.xml,.yaml,.yml,.toml,.log,.rst,.tex" class="hidden" onchange="handleHomeFiles(this.files)">
         </label>
 
+        <!-- DEPTH SLIDER -->
+        <div class="flex items-center gap-3 mt-3">
+          <label class="text-xs font-bold text-gray-400 whitespace-nowrap">Depth</label>
+          <input id="depthSlider" type="range" min="1" max="10" value="1"
+                 class="flex-1 h-2 accent-violet-500 cursor-pointer" style="max-width: 200px;"
+                 oninput="document.getElementById('depthLabel').textContent = this.value">
+          <span id="depthLabel" class="text-xs font-black text-violet-400 w-5 text-center">1</span>
+          <span class="text-[10px] text-gray-500" id="depthDesc">Brief overview</span>
+        </div>
+
         <!-- FILE PREVIEW -->
         <div id="homeFileList" class="mt-2 space-y-1"></div>
 
@@ -192,6 +202,10 @@
   <script>
     var homeFiles = [];
     var dragCounter = 0;
+    var depthLabels = {1:'Brief overview',2:'Concise summary',3:'Solid coverage',4:'Thorough research',5:'Comprehensive deep-dive',6:'Detailed analysis',7:'Expert-level reference',8:'Exhaustive coverage',9:'Encyclopedia-grade',10:'Maximum depth'};
+    document.getElementById('depthSlider').addEventListener('input', function() {
+      document.getElementById('depthDesc').textContent = depthLabels[this.value] || '';
+    });
 
     document.addEventListener('dragenter', function(e) {
       e.preventDefault();
@@ -424,7 +438,7 @@
       btn.disabled = true;
 
       try {
-        var payload = { topic: topic };
+        var payload = { topic: topic, depth: parseInt(document.getElementById('depthSlider').value) };
         if (url) payload.url = url;
         if (homeFiles.length) {
           payload.files = homeFiles.map(function(f) { return { name: f.name, content: f.content }; });

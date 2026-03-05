@@ -92,6 +92,7 @@ async def add_topic(slug: str, req: Request):
         urls = body.get("urls", [])
         files = body.get("files", [])
         message = body.get("message", "").strip()
+        depth = max(1, min(10, int(body.get("depth", 1))))
 
         if not topic and not message and not urls and not files:
             return JSONResponse(status_code=400, content={"error": "Topic, message, URL, or file is required"})
@@ -114,6 +115,7 @@ async def add_topic(slug: str, req: Request):
 
             new_dir = await organize_with_claude(
                 topic=input_text, instructions=instructions, urls=all_urls, files=files,
+                depth=depth,
             )
 
             topic_slug = TopicEntry.slugify(input_text)
