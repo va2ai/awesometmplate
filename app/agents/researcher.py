@@ -3,6 +3,7 @@
 from app.models import Directory
 from app.tools.api import call_tool
 from app.services.url_fetcher import fetch_url_content
+from app.services.exa_search import search_exa
 from app.agents.dynamic_schema import get_dynamic_directory_schema
 from app.agents.prompts import get_dynamic_system_prompt
 
@@ -40,21 +41,30 @@ async def organize_with_claude(
             line = "- " + (item.get("title", "") if isinstance(item, dict) else str(item))
             user_msg += line + "\n"
 
+    # Exa web search for grounding - always search when we have a topic
+    if topic:
+        exa_results = await search_exa(topic)
+        if exa_results and not exa_results.startswith("[Exa search failed"):
+            user_msg += "\n--- WEB SEARCH RESULTS (use these as real sources) ---\n"
+            user_msg += exa_results + "\n"
+
     if not items and not urls and not files:
         user_msg += (
-            "\nResearch this topic thoroughly. Create a section for each major item "
+            "\nResearch this topic thoroughly using the web search results above as primary sources. "
+            "Create a section for each major item "
             "with mixed block types: code_grid for install/examples, info_grid for features, "
             "comparison for pros/cons, stats for metrics, steps for guides, tips for gotchas, "
             "tables for structured data, faq for common questions, timeline for history, "
             "badges for tech stacks, checklist for requirements. "
-            "Include real URLs and GitHub stars where applicable."
+            "Include real URLs from the search results and accurate data. "
+            "Cite sources where possible."
         )
     else:
         user_msg += (
             "\nAnalyze the provided sources and organize the information into a structured directory. "
             "Determine the topic and title from the content. Create sections for each major concept "
             "with mixed block types for rich display. Preserve important details, code examples, "
-            "URLs, and data from the sources."
+            "URLs, and data from the sources. Use web search results to supplement and verify."
         )
 
     data = await call_tool(

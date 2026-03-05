@@ -627,14 +627,13 @@
     </div>
   </div>
 
-  <!-- LOADING OVERLAY -->
-  <div id="loadingOverlay" class="fixed inset-0 z-[200] hidden">
-    <div class="modal-backdrop absolute inset-0"></div>
-    <div class="absolute inset-0 flex items-center justify-center">
-      <div class="bg-white border-2 border-black p-8 text-center">
-        <iconify-icon icon="ph:circle-notch-bold" width="48" class="loading-spin text-orange-500 mb-4"></iconify-icon>
-        <p class="font-bold text-lg" id="loadingText">Claude is researching...</p>
-        <p class="text-sm text-gray-500 mt-2">This may take a minute</p>
+  <!-- STATUS TOAST -->
+  <div id="statusToast" class="fixed bottom-6 right-6 z-[200] hidden">
+    <div class="bg-gray-900 text-white border-2 border-black shadow-xl px-5 py-3 flex items-center gap-3 max-w-sm">
+      <iconify-icon icon="ph:circle-notch-bold" width="20" class="loading-spin text-{{ page.color }}-400 flex-shrink-0"></iconify-icon>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold truncate" id="loadingText">Working...</p>
+        <p class="text-xs text-gray-400">You can keep browsing</p>
       </div>
     </div>
   </div>
@@ -678,9 +677,9 @@
 
     function showLoading(text) {
       document.getElementById('loadingText').textContent = text || 'Claude is working...';
-      document.getElementById('loadingOverlay').classList.remove('hidden');
+      document.getElementById('statusToast').classList.remove('hidden');
     }
-    function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+    function hideLoading() { document.getElementById('statusToast').classList.add('hidden'); }
 
     var PAGE_SLUG = '{{ page.slug }}';
     var uploadedFiles = [];
