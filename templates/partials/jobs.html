@@ -123,6 +123,45 @@
     _doPoll(jobId, topic);
   }
 
+  function refreshPageContent() {
+    fetch(window.location.href)
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var newMain = doc.querySelector('main');
+        var oldMain = document.querySelector('main');
+        if (newMain && oldMain) {
+          var clone = newMain.cloneNode(true);
+          oldMain.replaceWith(clone);
+          // Re-init scroll reveal observers
+          var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                entry.target.querySelectorAll('.progress-bar').forEach(function(bar) {
+                  bar.style.width = bar.dataset.width;
+                });
+                observer.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.1 });
+          clone.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+          // Re-init any anime.js animations
+          clone.querySelectorAll('[data-animate]').forEach(function(el) {
+            var obs = new IntersectionObserver(function(entries) {
+              entries.forEach(function(e) { if (e.isIntersecting) { e.target.dispatchEvent(new Event('animate')); obs.unobserve(e.target); } });
+            }, { threshold: 0.1 });
+            obs.observe(el);
+          });
+          window.scrollTo({ top: 0 });
+        } else {
+          location.reload();
+        }
+      })
+      .catch(function() { location.reload(); });
+  }
+
   function markJobDone(jobId, status, error) {
     var el = document.getElementById('job-toast-' + jobId);
     if (el) {
@@ -131,7 +170,7 @@
       if (status === 'completed') {
         icon.setAttribute('icon', 'ph:check-circle-bold');
         icon.className = 'text-green-400 flex-shrink-0';
-        texts[1].textContent = 'Done! Reloading...';
+        texts[1].textContent = 'Done! Updating...';
       } else {
         icon.setAttribute('icon', 'ph:x-circle-bold');
         icon.className = 'text-red-400 flex-shrink-0';
@@ -141,7 +180,7 @@
     }
     removeActiveJob(jobId);
     if (status === 'completed') {
-      setTimeout(function() { location.reload(); }, 1500);
+      setTimeout(function() { refreshPageContent(); }, 1000);
     } else {
       setTimeout(function() { if (el) el.remove(); }, 5000);
     }
