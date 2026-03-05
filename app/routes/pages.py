@@ -163,7 +163,12 @@ async def ask_ai(slug: str, request: Request):
         job_id = create_job("ask-ai", slug=slug, topic=message[:80])
 
         async def _work():
+            import re
             directory = get_page_directory(slug)
+
+            # Extract URLs from the message and fetch their content
+            found_urls = re.findall(r'https?://[^\s<>"\']+', message)
+            urls = list(dict.fromkeys(found_urls))  # dedupe, preserve order
 
             # Build full page context so AI understands what's already there
             page_context = ""
@@ -192,7 +197,7 @@ async def ask_ai(slug: str, request: Request):
             )
 
             new_content = await organize_with_claude(
-                topic=message, instructions=instructions,
+                topic=message, instructions=instructions, urls=urls,
             )
 
             # Merge into existing
