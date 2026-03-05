@@ -9,7 +9,7 @@ from app.models import Directory, Page, PageIndex, SiteConfig, TopicEntry
 from app.services.claude import load_directory, save_directory
 from app.services.job_manager import create_job, complete_job, fail_job, run_job_in_background
 from app.tools.token_tracker import load_token_usage
-from app.agents import organize_with_claude, route_to_page, smart_add_with_claude
+from app.agents import organize_with_claude, design_directory, route_to_page, smart_add_with_claude
 
 logger = logging.getLogger(__name__)
 
@@ -242,6 +242,9 @@ async def add_topic_global(request: Request):
                 topic=topic, instructions=description or "", urls=urls, files=files,
                 depth=depth,
             )
+
+            # Enhance theming with designer agent
+            new_dir = await design_directory(new_dir)
 
             # Create topic slug and save
             topic_slug = TopicEntry.slugify(topic)

@@ -16,7 +16,7 @@ from app.models import Directory, PageIndex, TopicEntry
 from app.services.block_creator import load_custom_blocks
 from app.services.job_manager import create_job, complete_job, run_job_in_background
 from app.tools.token_tracker import load_token_usage
-from app.agents import organize_with_claude, smart_add_with_claude
+from app.agents import organize_with_claude, design_directory, smart_add_with_claude
 
 router = APIRouter()
 
@@ -118,6 +118,9 @@ async def add_topic(slug: str, req: Request):
                 depth=depth,
             )
 
+            # Enhance theming with designer agent
+            new_dir = await design_directory(new_dir)
+
             topic_slug = TopicEntry.slugify(input_text)
             if not topic_slug:
                 topic_slug = "topic"
@@ -177,6 +180,8 @@ async def smart_add(slug: str, topic_slug: str, request: Request):
                 new_dir = await organize_with_claude(topic=topic, instructions=description)
             else:
                 new_dir = await smart_add_with_claude(current, topic, description)
+            # Enhance theming with designer agent
+            new_dir = await design_directory(new_dir)
             save_topic_directory(slug, topic_slug, new_dir)
             complete_job(job_id)
 
@@ -209,6 +214,9 @@ async def research_topic(slug: str, topic_slug: str, req: Request):
             new_directory = await organize_with_claude(
                 topic=topic, instructions=instructions, urls=urls, files=files,
             )
+            # Enhance theming with designer agent
+            new_directory = await design_directory(new_directory)
+
             if existing and existing.sections:
                 # Merge into existing
                 merged = existing.model_dump()
