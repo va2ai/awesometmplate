@@ -11,5 +11,5 @@ from .blocks import (
     TableRow,
     TimelineEvent,
 )
-from .directory import Block, Directory, Section
+from .directory import Block, Directory, PageIndex, Section, TopicEntry
 from .site import Page, ResearchRequest, SiteConfig

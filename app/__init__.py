@@ -17,11 +17,12 @@ templates: Jinja2Templates = None
 def render_custom_block(template_str: str, block: dict, section: dict) -> str:
     """Render a custom block type's HTML template with the block data."""
     from jinja2 import Template
+    from markupsafe import Markup
     try:
         tmpl = Template(template_str)
-        return tmpl.render(block=block, section=section)
+        return Markup(tmpl.render(block=block, section=section))
     except Exception:
-        return '<div class="bg-red-50 border-2 border-red-300 p-4 mb-6 text-sm text-red-700">Custom block render error</div>'
+        return Markup('<div class="bg-red-50 border-2 border-red-300 p-4 mb-6 text-sm text-red-700">Custom block render error</div>')
 
 
 @asynccontextmanager

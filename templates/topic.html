@@ -3,7 +3,7 @@
 <head>
   {% include 'partials/head.html' %}
   <meta name="theme-color" content="#8b5cf6">
-  <title>{{ page.title }} - Awesome Knowledge Base</title>
+  <title>{{ directory.title }} - {{ page.title }} - Awesome Knowledge Base</title>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
   {% set color = page.color %}
@@ -17,7 +17,9 @@
             <iconify-icon icon="ph:house-bold" width="16"></iconify-icon>
           </a>
           <span class="text-white/30">/</span>
-          <span class="font-black text-white text-sm sm:text-base tracking-tight truncate">{{ page.title }}</span>
+          <a href="/page/{{ page.slug }}" class="text-white/60 hover:text-white transition-colors text-sm font-bold flex-shrink-0">{{ page.title }}</a>
+          <span class="text-white/30">/</span>
+          <span class="font-black text-white text-sm tracking-tight truncate">{{ directory.title }}</span>
         </div>
         <div class="flex items-center gap-1.5">
           <button onclick="openAddModal()" class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-2.5 py-1.5 text-xs font-bold transition-colors flex items-center gap-1">
@@ -38,41 +40,30 @@
   <div id="hamburgerMenu" class="fixed inset-0 z-[90] hidden">
     <div class="absolute inset-0 bg-{{ color }}-500">
       <div class="flex items-center justify-between px-4 sm:px-6 h-14 border-b border-white/20">
-        <span class="font-black text-white text-base tracking-tight">{{ page.title }}</span>
+        <span class="font-black text-white text-base tracking-tight">{{ directory.title }}</span>
         <button onclick="toggleHamburger()" class="text-white p-2"><iconify-icon icon="ph:x-bold" width="24"></iconify-icon></button>
       </div>
       <nav class="px-4 sm:px-6 pt-3 overflow-y-auto" style="max-height: calc(100vh - 4rem);">
-        {% if index.topics %}
-        <div class="text-[10px] font-bold text-white/50 uppercase tracking-widest px-4 mb-2">Topics</div>
+        <div class="text-[10px] font-bold text-white/50 uppercase tracking-widest px-4 mb-2">Sections</div>
         <div class="space-y-1 mb-4">
-          {% for t in index.topics %}
-          <button onclick="scrollToSection('topic-{{ t.slug }}'); toggleHamburger();"
+          {% for section in directory.sections %}
+          <button onclick="scrollToSection('section-{{ loop.index0 }}'); toggleHamburger();"
                   class="w-full flex items-center gap-3 px-4 py-3 text-white font-bold text-sm hover:bg-white/10 active:bg-white/20 transition-colors text-left">
-            <iconify-icon icon="{{ t.icon.replace('i-', '').replace('-', ':') if t.icon and 'i-' in t.icon else (t.icon or 'ph:folder-bold') }}" width="18"></iconify-icon>
-            {{ t.title }}
+            <iconify-icon icon="ph:{{ section.icon_class.replace('i-ph:', '') if section.icon_class else 'folder-bold' }}" width="18"></iconify-icon>
+            {{ section.title }}
           </button>
           {% endfor %}
         </div>
-        {% endif %}
         <div class="border-t border-white/20 pt-3 mb-2">
-          <div class="text-[10px] font-bold text-white/50 uppercase tracking-widest px-4 mb-2">Pages</div>
+          <div class="text-[10px] font-bold text-white/50 uppercase tracking-widest px-4 mb-2">Navigate</div>
         </div>
         <div class="space-y-1">
-          {% for p in config.pages %}
-          <a href="/page/{{ p.slug }}"
-             class="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors {% if p.slug == page.slug %}text-white font-bold bg-white/20{% else %}text-white/70 hover:text-white font-medium hover:bg-white/10{% endif %}">
-            <iconify-icon icon="{{ p.icon.replace('i-', '').replace('-', ':') if 'i-' in p.icon else p.icon }}" width="18"></iconify-icon>
-            {{ p.title }}
+          <a href="/page/{{ page.slug }}" class="flex items-center gap-3 px-4 py-2.5 text-white/70 hover:text-white font-medium text-sm hover:bg-white/10 transition-colors">
+            <iconify-icon icon="ph:arrow-left-bold" width="18"></iconify-icon> Back to {{ page.title }}
           </a>
-          {% endfor %}
           <a href="/" class="flex items-center gap-3 px-4 py-2.5 text-white/60 hover:text-white font-medium text-sm hover:bg-white/10 transition-colors">
             <iconify-icon icon="ph:house-bold" width="18"></iconify-icon> Home
           </a>
-        </div>
-        <div class="border-t border-white/20 pt-3 mt-3 mb-4">
-          <button onclick="clearPage()" class="flex items-center gap-3 px-4 py-2.5 text-red-200 hover:text-white hover:bg-red-600/40 font-medium text-sm transition-colors w-full text-left">
-            <iconify-icon icon="ph:trash-bold" width="18"></iconify-icon> Clear All Content
-          </button>
         </div>
       </nav>
     </div>
@@ -81,8 +72,11 @@
   <!-- MOBILE BOTTOM BAR -->
   <div class="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-gray-900 border-t-2 border-black mobile-action-bar">
     <div class="flex">
-      <button onclick="openAddModal()" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800 bg-{{ color }}-600">
-        <iconify-icon icon="ph:plus-bold" width="16"></iconify-icon> Add Topic
+      <a href="/page/{{ page.slug }}" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800">
+        <iconify-icon icon="ph:arrow-left-bold" width="16"></iconify-icon> {{ page.title }}
+      </a>
+      <button onclick="openAddModal()" class="flex-1 py-3 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-800 bg-{{ color }}-600 border-l border-black">
+        <iconify-icon icon="ph:plus-bold" width="16"></iconify-icon> Add
       </button>
     </div>
   </div>
@@ -92,103 +86,62 @@
   <!-- HERO -->
   <header class="bg-gradient-to-b from-{{ color }}-600 to-{{ color }}-500 text-white px-6 sm:px-10 lg:px-16 pt-24 sm:pt-36 pb-12 sm:pb-20">
     <div class="max-w-6xl mx-auto text-center relative">
-      <div class="mb-4 sm:mb-5">
-        <iconify-icon icon="ph:{{ page.icon.replace('i-ph:', '') }}" width="40" class="sm:hidden text-white/60"></iconify-icon>
-        <iconify-icon icon="ph:{{ page.icon.replace('i-ph:', '') }}" width="56" class="hidden sm:inline text-white/60"></iconify-icon>
-      </div>
-      <h1 class="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-4 sm:mb-5 drop-shadow-sm">{{ index.title }}</h1>
-      <p class="text-base sm:text-xl text-{{ color }}-100/80 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">{{ index.subtitle or page.subtitle }}</p>
+      <h1 class="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-4 sm:mb-5 drop-shadow-sm">{{ directory.title }}</h1>
+      <p class="text-base sm:text-xl text-{{ color }}-100/80 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">{{ directory.subtitle }}</p>
 
-      {% if index.topics %}
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto mt-4">
-        {% for t in index.topics %}
-        <button onclick="scrollToSection('topic-{{ t.slug }}')"
-                class="bg-white/10 hover:bg-white/20 active:bg-white/25 backdrop-blur-sm border border-white/20 hover:border-white/40 p-4 sm:p-5 transition-all text-left group rounded-sm">
-          <div class="flex items-center gap-2 mb-1.5">
-            <iconify-icon icon="{{ t.icon.replace('i-', '').replace('-', ':') if t.icon and 'i-' in t.icon else (t.icon or 'ph:folder-bold') }}" width="20" class="text-white/70 group-hover:text-white"></iconify-icon>
-            {% if t.stars %}
-            <span class="ml-auto text-[10px] font-bold text-white/50 flex items-center gap-0.5">
-              <iconify-icon icon="ph:star-fill" width="10"></iconify-icon>{{ t.stars }}
-            </span>
-            {% endif %}
-          </div>
-          <div class="font-bold text-white text-sm leading-tight">{{ t.title }}</div>
-          {% if t.description %}
-          <div class="text-[11px] text-white/50 mt-1.5 leading-snug" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ t.description }}</div>
-          {% endif %}
+      {% if directory.sections %}
+      <div class="scroll-snap-x flex sm:flex-wrap sm:justify-center gap-2 sm:gap-3 -mx-6 px-6 sm:mx-0 sm:px-0 pb-2">
+        {% for section in directory.sections %}
+        <button onclick="scrollToSection('section-{{ loop.index0 }}')"
+                class="px-4 sm:px-5 py-2.5 sm:py-3 bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-sm text-white text-xs sm:text-sm font-semibold transition-colors border border-white/20 whitespace-nowrap flex-shrink-0 sm:flex-shrink rounded-sm">
+          {{ section.title }}
         </button>
         {% endfor %}
-      </div>
-      {% else %}
-      <div class="border-2 border-dashed border-white/30 p-10 max-w-lg mx-auto backdrop-blur-sm bg-white/5">
-        <iconify-icon icon="ph:sparkle-bold" width="44" class="mb-4 opacity-60"></iconify-icon>
-        <p class="text-{{ color }}-100/80 mb-5 text-base">No topics yet. Add your first topic to get started.</p>
-        <button onclick="openAddModal()" class="bg-white text-{{ color }}-600 px-6 py-3 font-bold border-2 border-black hover:shadow-lg transition-shadow">
-          <iconify-icon icon="ph:plus-bold" class="mr-1"></iconify-icon> Add Topic
-        </button>
       </div>
       {% endif %}
     </div>
   </header>
 
-  <!-- MAIN: Topic preview sections -->
+  <!-- MAIN CONTENT -->
   <main class="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10 pb-20 sm:pb-10 relative flex-1">
-    {% for topic_data in topics %}
-    {% set t = topic_data.entry %}
-    {% set d = topic_data.directory %}
-    <div id="topic-{{ t.slug }}" class="mb-12 relative z-10">
-      <!-- Topic header -->
-      <div class="bg-{{ t.color or 'orange' }}-500 text-white px-4 py-3 mb-4 border-2 border-black flex items-center justify-between">
+    {% for section in directory.sections %}
+    {% set section_loop_idx = loop.index0 %}
+    <div id="section-{{ loop.index0 }}" class="mb-12 relative z-10">
+
+      <!-- SECTION HEADER -->
+      <div class="bg-{{ section.color or 'orange' }}-500 text-white px-4 py-2 mb-4 border-2 border-black">
         <h2 class="text-xl font-black flex items-center gap-2">
-          <iconify-icon icon="{{ t.icon.replace('i-', '').replace('-', ':') if t.icon and 'i-' in t.icon else (t.icon or 'ph:folder-bold') }}"></iconify-icon>
-          {{ t.title }}
-          {% if t.stars %}
-          <span class="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
-            <iconify-icon icon="ph:star-fill"></iconify-icon> {{ t.stars }}
+          <iconify-icon icon="ph:{{ section.icon_class.replace('i-ph:', '') if section.icon_class else 'folder-bold' }}"></iconify-icon>
+          {{ section.title }}
+          {% if section.stars %}
+          <span class="ml-auto bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+            <iconify-icon icon="ph:star-fill"></iconify-icon> {{ section.stars }}
           </span>
           {% endif %}
         </h2>
-        <div class="flex items-center gap-2">
-          <a href="/page/{{ page.slug }}/{{ t.slug }}" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1">
-            View All <iconify-icon icon="ph:arrow-right-bold" width="14"></iconify-icon>
-          </a>
-          <button onclick="deleteTopic('{{ t.slug }}')" class="bg-white/10 hover:bg-red-500/60 text-white/60 hover:text-white p-1.5 transition-colors" title="Delete topic">
-            <iconify-icon icon="ph:trash-bold" width="14"></iconify-icon>
-          </button>
-        </div>
       </div>
 
-      {% if t.description %}
-      <p class="text-sm text-gray-600 mb-4 max-w-3xl">{{ t.description }}</p>
-      {% endif %}
-
-      {% if d and d.sections %}
-      <!-- Preview: show first 2 sections -->
-      {% for section in d.sections[:2] %}
-      {% set section_loop_idx = loop.index0 %}
+      {% if section.description or section.url %}
       <div class="mb-4">
-        <div class="flex items-center gap-2 mb-2">
-          <iconify-icon icon="ph:{{ section.icon_class.replace('i-ph:', '') if section.icon_class else 'folder-bold' }}" width="16" class="text-{{ section.color or 'gray' }}-500"></iconify-icon>
-          <h3 class="text-sm font-bold text-gray-800">{{ section.title }}</h3>
-        </div>
-        {% include 'partials/blocks.html' %}
+        <p class="text-sm text-gray-700 max-w-3xl" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">{{ section.description }}</p>
+        {% if section.url %}
+        <a href="{{ section.url }}" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1.5">
+          <iconify-icon icon="ph:arrow-up-right"></iconify-icon>
+          {{ section.url | replace('https://', '') | replace('http://', '') }}
+        </a>
+        {% endif %}
       </div>
-      {% endfor %}
+      {% endif %}
 
-      {% if d.sections|length > 2 %}
-      <a href="/page/{{ page.slug }}/{{ t.slug }}" class="inline-flex items-center gap-1.5 text-sm font-bold text-{{ t.color or 'blue' }}-600 hover:text-{{ t.color or 'blue' }}-800 transition-colors mt-2">
-        <iconify-icon icon="ph:arrow-right-bold" width="14"></iconify-icon>
-        {{ d.sections|length - 2 }} more sections...
-      </a>
-      {% endif %}
-      {% endif %}
+      {% include 'partials/blocks.html' %}
     </div>
     {% endfor %}
 
-    {% if not index.topics %}
+    {% if not directory.sections %}
     <div class="text-center py-20 text-gray-400">
       <iconify-icon icon="ph:folder-dashed-bold" width="64" class="mb-4"></iconify-icon>
-      <p class="text-lg">No topics yet</p>
+      <p class="text-lg">No content yet</p>
     </div>
     {% endif %}
   </main>
@@ -196,44 +149,25 @@
   <!-- FOOTER -->
   <footer class="bg-white border-t-2 border-black mt-10 sm:mt-16 mb-14 sm:mb-0 safe-bottom">
     <div class="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 sm:py-14">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 mb-8">
-        <div>
-          <h3 class="font-black text-lg mb-2">{{ page.title }}</h3>
-          <p class="text-sm text-gray-600">Organize and display any collection of resources using Claude AI.</p>
-        </div>
-        <div>
-          <h4 class="font-bold text-sm mb-3">Actions</h4>
-          <ul class="space-y-2 text-sm">
-            <li><a href="#" onclick="openAddModal(); return false;" class="text-blue-600 hover:underline">Add Topic</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="font-bold text-sm mb-3">Token Usage</h4>
-          <ul class="space-y-2 text-sm text-gray-600">
-            <li>Total Cost: ${{ "%.4f"|format(tokens.total_cost_usd) }}</li>
-            <li>API Calls: {{ tokens.calls }}</li>
-          </ul>
-        </div>
-      </div>
       <div class="border-t border-gray-200 pt-8 pb-4 text-sm text-gray-500">
         Powered by Claude AI &bull; Built with FastAPI
       </div>
     </div>
   </footer>
 
-  <!-- ADD TOPIC MODAL -->
+  <!-- ADD CONTENT MODAL -->
   <div id="addModal" class="fixed inset-0 z-[100] hidden">
     <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
     <div class="absolute inset-0 flex items-end sm:items-center justify-center sm:p-4">
       <div class="bg-white border-2 border-black w-full sm:max-w-lg relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-none safe-bottom">
         <div class="bg-{{ color }}-500 text-white px-4 py-3 border-b-2 border-black sticky top-0 z-10 rounded-t-2xl sm:rounded-none flex items-center justify-between">
           <h2 class="font-black flex items-center gap-2 text-sm">
-            <iconify-icon icon="ph:plus-bold"></iconify-icon> Add to {{ page.title }}
+            <iconify-icon icon="ph:plus-bold"></iconify-icon> Add to {{ directory.title }}
           </h2>
           <button onclick="closeModals()" class="text-white/70 hover:text-white"><iconify-icon icon="ph:x-bold" width="18"></iconify-icon></button>
         </div>
         <div class="p-4 space-y-3">
-          <textarea id="addTopic" rows="3" placeholder="Type a topic, describe content you want, or paste a URL..."
+          <textarea id="addTopic" rows="3" placeholder="Type a topic or describe what to add..."
                     class="w-full px-3 py-2 border-2 border-black text-sm focus:outline-none focus:ring-2 focus:ring-{{ color }}-300 resize-none"
                     enterkeyhint="send"></textarea>
           <details class="group">
@@ -277,23 +211,12 @@
 
   <script>
     var PAGE_SLUG = '{{ page.slug }}';
+    var TOPIC_SLUG = '{{ topic_slug }}';
     var uploadedFiles = [];
 
     function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addTopic').focus(); }
     function closeModals() { document.getElementById('addModal').classList.add('hidden'); }
     function toggleHamburger() { document.getElementById('hamburgerMenu').classList.toggle('hidden'); }
-
-    async function clearPage() {
-      if (!confirm('Clear all topics from this page? This cannot be undone.')) return;
-      await fetch('/api/page/' + PAGE_SLUG, { method: 'DELETE' });
-      location.reload();
-    }
-
-    async function deleteTopic(topicSlug) {
-      if (!confirm('Delete this topic?')) return;
-      await fetch('/api/page/' + PAGE_SLUG + '/' + topicSlug, { method: 'DELETE' });
-      location.reload();
-    }
 
     function addUrlRow() {
       var list = document.getElementById('urlList');
@@ -363,15 +286,20 @@
       if (!input && !hasUrls && !hasFiles) return;
       closeModals();
       try {
-        var body = { topic: input, urls: urls, files: uploadedFiles.map(function(f) { return { name: f.name, content: f.content }; }) };
-        if (input.length > 40 || (input.includes(' ') && input.split(' ').length > 4)) {
-          body.message = input;
+        var res;
+        if (hasUrls || hasFiles) {
+          res = await fetch('/api/page/' + PAGE_SLUG + '/' + TOPIC_SLUG + '/research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic: input, urls: urls, files: uploadedFiles.map(function(f) { return { name: f.name, content: f.content }; }), instructions: '' })
+          });
+        } else {
+          res = await fetch('/api/page/' + PAGE_SLUG + '/' + TOPIC_SLUG + '/smart-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic: input, description: '' })
+          });
         }
-        var res = await fetch('/api/page/' + PAGE_SLUG + '/add-topic', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
         var data = await res.json();
         if (data.error) throw new Error(data.error);
         document.getElementById('addTopic').value = '';

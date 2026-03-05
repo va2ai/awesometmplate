@@ -1,9 +1,18 @@
 import json
+import logging
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from app.routes.home import get_page_directory, get_page_or_404, save_page_directory
+logger = logging.getLogger(__name__)
+
+from app.routes.home import (
+    get_page_or_404, get_page_index, save_page_index, get_topic_directory,
+    save_topic_directory, delete_topic, add_topic_to_index, get_topic_dir,
+    load_site_config,
+)
+from app.config import PAGES_DIR
+from app.models import Directory, PageIndex, TopicEntry
 from app.services.block_creator import load_custom_blocks
 from app.services.job_manager import create_job, complete_job, run_job_in_background
 from app.tools.token_tracker import load_token_usage
@@ -12,29 +21,175 @@ from app.agents import organize_with_claude, smart_add_with_claude
 router = APIRouter()
 
 
+# --- Parent page view (topic cards + preview sections) ---
+
 @router.get("/page/{slug}", response_class=HTMLResponse)
 async def page_view(request: Request, slug: str):
     page = get_page_or_404(slug)
     if not page:
         return HTMLResponse("Page not found", status_code=404)
-    directory = get_page_directory(slug)
+    index = get_page_index(slug)
+    topics_with_data = []
+    for t in index.topics:
+        d = get_topic_directory(slug, t.slug)
+        topics_with_data.append({"entry": t, "directory": d})
     tokens = load_token_usage()
-    from app.routes.home import load_site_config
     config = load_site_config()
     custom_blocks = {b["type_name"]: b for b in load_custom_blocks()}
     from app import templates
     return templates.TemplateResponse(
-        "page.html", {"request": request, "page": page, "directory": directory, "tokens": tokens, "config": config, "custom_blocks": custom_blocks}
+        "page.html", {
+            "request": request, "page": page, "index": index,
+            "topics": topics_with_data, "tokens": tokens,
+            "config": config, "custom_blocks": custom_blocks,
+        }
     )
 
 
+# --- Topic detail view (full sections + blocks) ---
+
+@router.get("/page/{slug}/{topic_slug}", response_class=HTMLResponse)
+async def topic_view(request: Request, slug: str, topic_slug: str):
+    page = get_page_or_404(slug)
+    if not page:
+        return HTMLResponse("Page not found", status_code=404)
+    directory = get_topic_directory(slug, topic_slug)
+    if not directory:
+        return HTMLResponse("Topic not found", status_code=404)
+    index = get_page_index(slug)
+    topic_entry = next((t for t in index.topics if t.slug == topic_slug), None)
+    tokens = load_token_usage()
+    config = load_site_config()
+    custom_blocks = {b["type_name"]: b for b in load_custom_blocks()}
+    from app import templates
+    return templates.TemplateResponse(
+        "topic.html", {
+            "request": request, "page": page, "topic_entry": topic_entry,
+            "directory": directory, "tokens": tokens, "config": config,
+            "custom_blocks": custom_blocks, "topic_slug": topic_slug,
+        }
+    )
+
+
+# --- API: page index ---
+
 @router.get("/api/page/{slug}")
 async def get_page_data(slug: str):
-    return get_page_directory(slug).model_dump()
+    return get_page_index(slug).model_dump()
 
 
-@router.post("/api/page/{slug}/research")
-async def research_topic(slug: str, req: Request):
+# --- API: add topic to page ---
+
+@router.post("/api/page/{slug}/add-topic")
+async def add_topic(slug: str, req: Request):
+    page = get_page_or_404(slug)
+    if not page:
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    try:
+        body = await req.json()
+        topic = body.get("topic", "").strip()
+        description = body.get("description", "").strip()
+        urls = body.get("urls", [])
+        files = body.get("files", [])
+        message = body.get("message", "").strip()
+
+        if not topic and not message:
+            return JSONResponse(status_code=400, content={"error": "Topic or message is required"})
+
+        display_topic = topic or message[:80]
+        job_id = create_job("add-topic", slug=slug, topic=display_topic)
+
+        async def _work():
+            import re
+            input_text = message or topic
+            found_urls = re.findall(r'https?://[^\s<>"\']+', input_text)
+            all_urls = list(dict.fromkeys(urls + found_urls))
+
+            instructions = description or ""
+            if message and not topic:
+                instructions = (
+                    f"The user is on the '{page.title}' page and sent: \"{message}\"\n"
+                    f"Generate comprehensive content about this topic."
+                )
+
+            new_dir = await organize_with_claude(
+                topic=input_text, instructions=instructions, urls=all_urls, files=files,
+            )
+
+            topic_slug = TopicEntry.slugify(input_text)
+            if not topic_slug:
+                topic_slug = "topic"
+
+            # Dedupe slug
+            index = get_page_index(slug)
+            existing_slugs = {t.slug for t in index.topics}
+            base_slug = topic_slug
+            counter = 2
+            while topic_slug in existing_slugs:
+                topic_slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            save_topic_directory(slug, topic_slug, new_dir)
+
+            entry = TopicEntry(
+                slug=topic_slug,
+                title=new_dir.title or input_text,
+                description=new_dir.subtitle or description,
+                icon=new_dir.sections[0].icon_class if new_dir.sections else "i-ph:folder-bold",
+                color=new_dir.sections[0].color if new_dir.sections else "orange",
+            )
+            add_topic_to_index(slug, entry)
+            complete_job(job_id)
+
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running", "slug": slug}
+
+    except Exception as e:
+        logger.error("Route error", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+
+# --- API: add content to existing topic ---
+
+@router.post("/api/page/{slug}/{topic_slug}/smart-add")
+async def smart_add(slug: str, topic_slug: str, request: Request):
+    page = get_page_or_404(slug)
+    if not page:
+        return JSONResponse(status_code=404, content={"error": "Page not found"})
+    directory = get_topic_directory(slug, topic_slug)
+    if not directory:
+        return JSONResponse(status_code=404, content={"error": "Topic not found"})
+    try:
+        body = await request.json()
+        topic = body.get("topic", "")
+        description = body.get("description", "")
+
+        if not topic:
+            return JSONResponse(status_code=400, content={"error": "Topic is required"})
+
+        job_id = create_job("smart-add", slug=slug, topic=topic)
+
+        async def _work():
+            current = get_topic_directory(slug, topic_slug)
+            if not current or not current.sections:
+                new_dir = await organize_with_claude(topic=topic, instructions=description)
+            else:
+                new_dir = await smart_add_with_claude(current, topic, description)
+            save_topic_directory(slug, topic_slug, new_dir)
+            complete_job(job_id)
+
+        run_job_in_background(job_id, _work())
+        return {"jobId": job_id, "status": "running", "slug": slug}
+
+    except Exception as e:
+        logger.error("Route error", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+
+# --- API: research into existing topic ---
+
+@router.post("/api/page/{slug}/{topic_slug}/research")
+async def research_topic(slug: str, topic_slug: str, req: Request):
     page = get_page_or_404(slug)
     if not page:
         return JSONResponse(status_code=404, content={"error": "Page not found"})
@@ -48,13 +203,13 @@ async def research_topic(slug: str, req: Request):
         job_id = create_job("research", slug=slug, topic=topic or "research")
 
         async def _work():
-            existing = get_page_directory(slug)
+            existing = get_topic_directory(slug, topic_slug)
             new_directory = await organize_with_claude(
                 topic=topic, instructions=instructions, urls=urls, files=files,
             )
-            # Always merge - never overwrite
-            merged = existing.model_dump()
-            if existing.sections:
+            if existing and existing.sections:
+                # Merge into existing
+                merged = existing.model_dump()
                 existing_titles = {s.title.lower() for s in existing.sections}
                 for section in new_directory.model_dump()["sections"]:
                     if section["title"].lower() not in existing_titles:
@@ -68,179 +223,40 @@ async def research_topic(slug: str, req: Request):
                                     if key not in existing_labels:
                                         merged["sections"][i]["blocks"].append(block)
                                 break
+                final = Directory(**merged)
             else:
-                merged["sections"] = new_directory.model_dump()["sections"]
-            # Always preserve existing title/subtitle if set
-            if not merged.get("title"):
-                merged["title"] = new_directory.title
-            if not merged.get("subtitle"):
-                merged["subtitle"] = new_directory.subtitle
-            from app.models import Directory as DirModel
-            directory = DirModel(**merged)
-            save_page_directory(slug, directory)
+                final = new_directory
+            save_topic_directory(slug, topic_slug, final)
             complete_job(job_id)
 
         run_job_in_background(job_id, _work())
         return {"jobId": job_id, "status": "running", "slug": slug}
 
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("Route error", exc_info=True)
+        logger.error("Route error", exc_info=True)
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
-@router.post("/api/page/{slug}/smart-add")
-async def smart_add(slug: str, request: Request):
-    page = get_page_or_404(slug)
-    if not page:
-        return JSONResponse(status_code=404, content={"error": "Page not found"})
-    try:
-        body = await request.json()
-        topic = body.get("topic", "")
-        description = body.get("description", "")
+# --- API: delete topic ---
 
-        if not topic:
-            return JSONResponse(status_code=400, content={"error": "Topic is required"})
-
-        job_id = create_job("smart-add", slug=slug, topic=topic)
-
-        async def _work():
-            directory = get_page_directory(slug)
-            if not directory.sections:
-                new_dir = await organize_with_claude(topic=topic, instructions=description)
-            else:
-                new_dir = await smart_add_with_claude(directory, topic, description)
-            save_page_directory(slug, new_dir)
-            complete_job(job_id)
-
-        run_job_in_background(job_id, _work())
-        return {"jobId": job_id, "status": "running", "slug": slug}
-
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("Route error", exc_info=True)
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+@router.delete("/api/page/{slug}/{topic_slug}")
+async def delete_topic_route(slug: str, topic_slug: str):
+    delete_topic(slug, topic_slug)
+    index = get_page_index(slug)
+    index.topics = [t for t in index.topics if t.slug != topic_slug]
+    save_page_index(slug, index)
+    return {"status": "ok"}
 
 
-@router.post("/api/page/{slug}/organize")
-async def organize_existing(slug: str, request: Request):
-    page = get_page_or_404(slug)
-    if not page:
-        return JSONResponse(status_code=404, content={"error": "Page not found"})
-    try:
-        body = await request.json()
-        directory = get_page_directory(slug)
-        instructions = body.get("instructions", "Reorganize and improve this directory")
-        existing_json = json.dumps(directory.model_dump(), indent=2)
-
-        job_id = create_job("organize", slug=slug, topic=directory.title)
-
-        async def _work():
-            new_directory = await organize_with_claude(
-                topic=directory.title,
-                instructions=f"Reorganize this existing directory:\n{existing_json}\n\nInstructions: {instructions}",
-            )
-            save_page_directory(slug, new_directory)
-            complete_job(job_id)
-
-        run_job_in_background(job_id, _work())
-        return {"jobId": job_id, "status": "running", "slug": slug}
-
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("Route error", exc_info=True)
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-
-@router.post("/api/page/{slug}/ask-ai")
-async def ask_ai(slug: str, request: Request):
-    """Free-form AI message: describe what you want and AI adds it to the page."""
-    page = get_page_or_404(slug)
-    if not page:
-        return JSONResponse(status_code=404, content={"error": "Page not found"})
-    try:
-        body = await request.json()
-        message = body.get("message", "").strip()
-        if not message:
-            return JSONResponse(status_code=400, content={"error": "Message is required"})
-
-        job_id = create_job("ask-ai", slug=slug, topic=message[:80])
-
-        async def _work():
-            import re
-            directory = get_page_directory(slug)
-
-            # Extract URLs from the message and fetch their content
-            found_urls = re.findall(r'https?://[^\s<>"\']+', message)
-            urls = list(dict.fromkeys(found_urls))  # dedupe, preserve order
-
-            # Build full page context so AI understands what's already there
-            page_context = ""
-            if directory.sections:
-                context_parts = []
-                for sec in directory.sections:
-                    block_types = [b.type for b in sec.blocks] if sec.blocks else []
-                    context_parts.append(
-                        f"- {sec.title}: {sec.description or 'no description'} "
-                        f"({len(sec.blocks)} blocks: {', '.join(block_types)})"
-                    )
-                page_context = (
-                    f"\n\nThis page '{page.title}' ({page.subtitle}) already has these sections:\n"
-                    + "\n".join(context_parts)
-                    + "\n\nDo NOT duplicate existing content. Add NEW content that complements what's already there."
-                )
-
-            instructions = (
-                f"The user is on the '{page.title}' page ({page.subtitle}) and sent this message:\n\n"
-                f'"{message}"\n\n'
-                f"Generate content that fulfills their request. "
-                f"Create sections with appropriate block types (code_grid, info_grid, "
-                f"comparison, stats, steps, table, faq, timeline, badges, checklist, tip, text, link_list). "
-                f"Be specific and detailed based on what they asked for."
-                f"{page_context}"
-            )
-
-            new_content = await organize_with_claude(
-                topic=message, instructions=instructions, urls=urls,
-            )
-
-            # Always merge - never overwrite
-            merged = directory.model_dump()
-            if directory.sections:
-                existing_titles = {s.title.lower() for s in directory.sections}
-                for section in new_content.model_dump()["sections"]:
-                    if section["title"].lower() not in existing_titles:
-                        merged["sections"].append(section)
-                    else:
-                        for i, es in enumerate(merged["sections"]):
-                            if es["title"].lower() == section["title"].lower():
-                                for block in section.get("blocks", []):
-                                    merged["sections"][i]["blocks"].append(block)
-                                break
-            else:
-                merged["sections"] = new_content.model_dump()["sections"]
-            if not merged.get("title"):
-                merged["title"] = new_content.title
-            if not merged.get("subtitle"):
-                merged["subtitle"] = new_content.subtitle
-            from app.models import Directory as DirModel
-            final = DirModel(**merged)
-
-            save_page_directory(slug, final)
-            complete_job(job_id)
-
-        run_job_in_background(job_id, _work())
-        return {"jobId": job_id, "status": "running", "slug": slug}
-
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("Route error", exc_info=True)
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
+# --- API: clear entire page ---
 
 @router.delete("/api/page/{slug}")
 async def clear_page(slug: str):
-    from app.config import PAGES_DIR
+    """Delete all topics and reset the page index."""
+    import shutil
+    topic_dir = get_topic_dir(slug)
+    if topic_dir.exists():
+        shutil.rmtree(topic_dir)
     filepath = PAGES_DIR / f"{slug}.json"
     if filepath.exists():
         filepath.unlink()

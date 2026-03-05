@@ -1,0 +1,174 @@
+{# Job tracking, polling, toast UI. Expects: color variable set before include #}
+
+<!-- JOBS PANEL -->
+<div id="jobsPanel" class="fixed bottom-14 sm:bottom-6 right-4 sm:right-6 z-[200] space-y-2 hidden"></div>
+
+<!-- GO TO TOP -->
+<button id="goTopBtn" onclick="window.scrollTo({top:0})" class="fixed bottom-16 sm:bottom-6 left-4 sm:left-6 z-[100] hidden bg-gray-900 text-white w-10 h-10 border-2 border-black shadow-lg flex items-center justify-center active:bg-gray-700 hover:shadow-xl transition-all">
+  <iconify-icon icon="ph:arrow-up-bold" width="18"></iconify-icon>
+</button>
+
+<script>
+  // Go to top visibility
+  window.addEventListener('scroll', function() {
+    var btn = document.getElementById('goTopBtn');
+    if (window.scrollY > 400) { btn.classList.remove('hidden'); btn.classList.add('flex'); }
+    else { btn.classList.add('hidden'); btn.classList.remove('flex'); }
+  });
+
+  function scrollToSection(id) {
+    document.getElementById(id)?.scrollIntoView({ block: 'start' });
+  }
+
+  function copyCode(btn) {
+    var code = btn.closest('.group').querySelector('code').textContent;
+    navigator.clipboard.writeText(code);
+    var icon = btn.querySelector('iconify-icon');
+    icon.setAttribute('icon', 'ph:check-bold');
+    icon.className = 'text-green-400';
+    setTimeout(function() {
+      icon.setAttribute('icon', 'ph:copy-bold');
+      icon.className = 'text-gray-400 hover:text-white';
+    }, 2000);
+  }
+
+  function toggleTokenPanel() {
+    document.getElementById('tokenPanel').classList.toggle('hidden');
+  }
+
+  document.addEventListener('click', function(e) {
+    var panel = document.getElementById('tokenPanel');
+    if (!panel.classList.contains('hidden') && !panel.contains(e.target) && !e.target.closest('[onclick*="toggleTokenPanel"]')) {
+      panel.classList.add('hidden');
+    }
+  });
+
+  // Tab switching
+  function switchTab(containerId, idx) {
+    var container = document.getElementById(containerId);
+    container.querySelectorAll('.tab-btn').forEach(function(btn) {
+      if (parseInt(btn.dataset.idx) === idx) {
+        btn.className = btn.className.replace(/text-gray-600 hover:bg-gray-50/g, '').replace(/bg-\w+-500 text-white/g, '') + ' bg-{{ color }}-500 text-white';
+      } else {
+        btn.className = btn.className.replace(/bg-\w+-500 text-white/g, '') + ' text-gray-600 hover:bg-gray-50';
+      }
+    });
+    container.querySelectorAll('.tab-panel').forEach(function(panel) {
+      panel.classList.toggle('hidden', parseInt(panel.dataset.idx) !== idx);
+    });
+  }
+
+  // Scroll reveal + progress bar animation
+  (function() {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          entry.target.querySelectorAll('.progress-bar').forEach(function(bar) {
+            bar.style.width = bar.dataset.width;
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+  })();
+
+  // --- Multi-job tracking ---
+  function getActiveJobs() {
+    try { return JSON.parse(localStorage.getItem('activeJobs') || '[]'); } catch(e) { return []; }
+  }
+  function saveActiveJobs(jobs) { localStorage.setItem('activeJobs', JSON.stringify(jobs)); }
+  function removeActiveJob(jobId) {
+    saveActiveJobs(getActiveJobs().filter(function(j) { return j.jobId !== jobId; }));
+    renderJobsPanel();
+  }
+  function renderJobsPanel() {
+    var panel = document.getElementById('jobsPanel');
+    var jobs = getActiveJobs();
+    while (panel.firstChild) panel.removeChild(panel.firstChild);
+    if (!jobs.length) { panel.classList.add('hidden'); return; }
+    panel.classList.remove('hidden');
+    jobs.forEach(function(j) {
+      var div = document.createElement('div');
+      div.id = 'job-toast-' + j.jobId;
+      div.className = 'bg-gray-900 text-white border-2 border-black shadow-xl px-4 py-3 flex items-center gap-3 max-w-sm';
+      var icon = document.createElement('iconify-icon');
+      icon.setAttribute('icon', 'ph:circle-notch-bold');
+      icon.setAttribute('width', '18');
+      icon.className = 'loading-spin text-{{ color }}-400 flex-shrink-0';
+      div.appendChild(icon);
+      var txt = document.createElement('div');
+      txt.className = 'flex-1 min-w-0';
+      var p1 = document.createElement('p');
+      p1.className = 'text-sm font-bold truncate';
+      p1.textContent = j.topic || 'Working...';
+      var p2 = document.createElement('p');
+      p2.className = 'text-xs text-gray-400';
+      p2.textContent = 'Processing...';
+      txt.appendChild(p1);
+      txt.appendChild(p2);
+      div.appendChild(txt);
+      panel.appendChild(div);
+    });
+  }
+
+  function addJob(jobId, topic) {
+    var jobs = getActiveJobs();
+    if (!jobs.some(function(j) { return j.jobId === jobId; })) {
+      jobs.push({ jobId: jobId, topic: topic });
+      saveActiveJobs(jobs);
+    }
+    renderJobsPanel();
+    _doPoll(jobId, topic);
+  }
+
+  function markJobDone(jobId, status, error) {
+    var el = document.getElementById('job-toast-' + jobId);
+    if (el) {
+      var icon = el.querySelector('iconify-icon');
+      var texts = el.querySelectorAll('p');
+      if (status === 'completed') {
+        icon.setAttribute('icon', 'ph:check-circle-bold');
+        icon.className = 'text-green-400 flex-shrink-0';
+        texts[1].textContent = 'Done! Reloading...';
+      } else {
+        icon.setAttribute('icon', 'ph:x-circle-bold');
+        icon.className = 'text-red-400 flex-shrink-0';
+        texts[1].textContent = error || 'Failed';
+        texts[1].className = 'text-xs text-red-400';
+      }
+    }
+    removeActiveJob(jobId);
+    if (status === 'completed') {
+      setTimeout(function() { location.reload(); }, 1500);
+    } else {
+      setTimeout(function() { if (el) el.remove(); }, 5000);
+    }
+  }
+
+  function _doPoll(jobId, topic) {
+    fetch('/api/jobs/' + jobId)
+      .then(function(r) { return r.json(); })
+      .then(function(job) {
+        if (job.status === 'completed') { markJobDone(jobId, 'completed'); }
+        else if (job.status === 'failed') { markJobDone(jobId, 'failed', job.error || 'Unknown error'); }
+        else { setTimeout(function() { _doPoll(jobId, topic); }, 2000); }
+      })
+      .catch(function() { setTimeout(function() { _doPoll(jobId, topic); }, 3000); });
+  }
+
+  // Resume active jobs on page load
+  (function() {
+    var old = localStorage.getItem('activeJob');
+    if (old) {
+      try {
+        var j = JSON.parse(old);
+        if (j.jobId) { var jobs = getActiveJobs(); jobs.push({ jobId: j.jobId, topic: j.topic }); saveActiveJobs(jobs); }
+      } catch(e) {}
+      localStorage.removeItem('activeJob');
+    }
+    var jobs = getActiveJobs();
+    if (jobs.length) { renderJobsPanel(); jobs.forEach(function(j) { _doPoll(j.jobId, j.topic); }); }
+  })();
+</script>

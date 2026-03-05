@@ -1,0 +1,30 @@
+{# Token panel. Expects: tokens, color #}
+<div id="tokenPanel" class="fixed top-12 sm:top-14 right-2 sm:right-6 z-[60] hidden">
+  <div class="bg-white border-2 border-black shadow-lg w-64 sm:w-72">
+    <div class="bg-gray-900 text-white px-4 py-2 border-b-2 border-black flex items-center justify-between">
+      <span class="font-bold text-sm flex items-center gap-1.5">
+        <iconify-icon icon="ph:chart-bar-bold"></iconify-icon> Token Usage
+      </span>
+      <button onclick="toggleTokenPanel()" class="text-gray-400 hover:text-white">
+        <iconify-icon icon="ph:x-bold"></iconify-icon>
+      </button>
+    </div>
+    <div class="p-4 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-blue-50 border border-blue-200 p-2 text-center">
+          <div class="text-lg font-black text-blue-700" id="panelInputTokens">{{ "{:,}".format(tokens.total_input) }}</div>
+          <div class="text-[10px] font-bold text-blue-500 uppercase">Input Tokens</div>
+        </div>
+        <div class="bg-green-50 border border-green-200 p-2 text-center">
+          <div class="text-lg font-black text-green-700" id="panelOutputTokens">{{ "{:,}".format(tokens.total_output) }}</div>
+          <div class="text-[10px] font-bold text-green-500 uppercase">Output Tokens</div>
+        </div>
+      </div>
+      <div class="bg-orange-50 border border-orange-200 p-2 text-center">
+        <div class="text-xl font-black text-orange-700" id="panelCost">${{ "%.4f"|format(tokens.total_cost_usd) }}</div>
+        <div class="text-[10px] font-bold text-orange-500 uppercase">Total Cost ({{ tokens.calls }} calls)</div>
+      </div>
+      <div class="text-[10px] text-gray-400 text-center">Sonnet 4: $3/M in, $15/M out</div>
+    </div>
+  </div>
+</div>

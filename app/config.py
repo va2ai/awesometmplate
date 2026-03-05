@@ -9,7 +9,7 @@ load_dotenv(override=True)
 
 # Environment
 ENV = os.getenv("ENV", "dev")
-PORT = int(os.getenv("PORT", "3339"))
+PORT = int(os.getenv("PORT", "3340"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if ENV == "dev" else "INFO")
 API_TIMEOUT = float(os.getenv("API_TIMEOUT", "300"))
 
