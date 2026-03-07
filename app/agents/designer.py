@@ -4,7 +4,7 @@ import logging
 
 from app.models import Directory
 from app.tools.api import call_tool
-from app.agents.designer_prompt import DESIGNER_SYSTEM_PROMPT
+from app.agents.designer_prompt import DESIGNER_SYSTEM_PROMPT, DESIGNER_CODE_GUIDE_PROMPT
 from app.agents.dynamic_schema import get_dynamic_directory_schema
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,7 @@ async def design_directory(directory: Directory) -> Directory:
     The designer does NOT change content text or add/remove sections.
     It enhances: colors, icons, animation choices, and block type upgrades.
     """
+    original_theme = directory.theme
     dir_data = directory.model_dump()
 
     user_msg = (
@@ -27,10 +28,15 @@ async def design_directory(directory: Directory) -> Directory:
 
     schema = get_dynamic_directory_schema()
 
+    if directory.theme == "code_guide":
+        system = DESIGNER_CODE_GUIDE_PROMPT
+    else:
+        system = DESIGNER_SYSTEM_PROMPT
+
     try:
         result = await call_tool(
             user_message=user_msg,
-            system=DESIGNER_SYSTEM_PROMPT,
+            system=system,
             tool_name="enhance_directory",
             tool_schema=schema,
             max_tokens=16384,
@@ -38,7 +44,9 @@ async def design_directory(directory: Directory) -> Directory:
         )
         result.pop("_tokens", None)
         result.pop("design_notes", None)
-        return Directory(**result)
+        enhanced = Directory(**result)
+        enhanced.theme = original_theme
+        return enhanced
     except Exception as e:
         logger.error("Designer agent failed, returning original: %s", e)
         return directory

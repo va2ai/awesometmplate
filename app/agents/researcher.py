@@ -5,7 +5,7 @@ from app.tools.api import call_tool
 from app.services.url_fetcher import fetch_url_content
 from app.services.exa_search import search_exa
 from app.agents.dynamic_schema import get_dynamic_directory_schema
-from app.agents.prompts import get_dynamic_system_prompt
+from app.agents.prompts import get_dynamic_system_prompt, get_dynamic_code_guide_prompt
 
 # Depth config: maps depth 1-10 to research parameters
 DEPTH_CONFIG = {
@@ -29,6 +29,7 @@ def _get_depth_config(depth: int) -> dict:
 async def organize_with_claude(
     topic: str = "", items: list = None, instructions: str = "",
     urls: list = None, files: list = None, depth: int = 1,
+    mode: str = "default",
 ) -> Directory:
     cfg = _get_depth_config(depth)
     user_msg = ""
@@ -92,13 +93,26 @@ async def organize_with_claude(
             "URLs, and data from the sources. Use web search results to supplement and verify."
         )
 
+    if mode == "code_guide":
+        system_prompt = get_dynamic_code_guide_prompt()
+        user_msg += (
+            "\n\nIMPORTANT: Generate this as a CODING GUIDE with theme: 'code_guide'. "
+            "Use code_grid, file_tree, steps, callout, flow_diagram, tabs, and table blocks heavily. "
+            "Every section should have code examples. Structure as a developer reference guide."
+        )
+    else:
+        system_prompt = get_dynamic_system_prompt()
+
     data = await call_tool(
         user_message=user_msg,
-        system=get_dynamic_system_prompt(),
+        system=system_prompt,
         tool_name="create_directory",
         tool_schema=get_dynamic_directory_schema(),
         max_tokens=cfg["max_tokens"],
         use_grounding=True,
     )
     data.pop("_tokens", None)
-    return Directory(**data)
+    directory = Directory(**data)
+    if mode == "code_guide":
+        directory.theme = "code_guide"
+    return directory

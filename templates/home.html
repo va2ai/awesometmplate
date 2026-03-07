@@ -130,14 +130,19 @@
           <input id="globalFile" type="file" multiple accept=".txt,.md,.json,.csv,.html,.py,.js,.ts,.pdf,.xml,.yaml,.yml,.toml,.log,.rst,.tex" class="hidden" onchange="handleHomeFiles(this.files)">
         </label>
 
-        <!-- DEPTH SLIDER -->
-        <div class="flex items-center gap-3 mt-3">
+        <!-- DEPTH SLIDER + CODE GUIDE TOGGLE -->
+        <div class="flex items-center gap-3 mt-3 flex-wrap">
           <label class="text-xs font-bold text-gray-400 whitespace-nowrap">Depth</label>
           <input id="depthSlider" type="range" min="1" max="10" value="1"
                  class="flex-1 h-2 accent-violet-500 cursor-pointer" style="max-width: 200px;"
                  oninput="document.getElementById('depthLabel').textContent = this.value">
           <span id="depthLabel" class="text-xs font-black text-violet-400 w-5 text-center">1</span>
           <span class="text-[10px] text-gray-500" id="depthDesc">Brief overview</span>
+          <button id="codeGuideBtn" onclick="toggleCodeGuide()" type="button"
+                  class="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border transition-colors bg-transparent text-gray-400 border-gray-600 hover:border-violet-400 hover:text-violet-400">
+            <iconify-icon icon="ph:terminal-bold" width="14"></iconify-icon>
+            Code Guide
+          </button>
         </div>
 
         <!-- FILE PREVIEW -->
@@ -202,7 +207,21 @@
   <script>
     var homeFiles = [];
     var dragCounter = 0;
+    var currentMode = 'default';
     var depthLabels = {1:'Brief overview',2:'Concise summary',3:'Solid coverage',4:'Thorough research',5:'Comprehensive deep-dive',6:'Detailed analysis',7:'Expert-level reference',8:'Exhaustive coverage',9:'Encyclopedia-grade',10:'Maximum depth'};
+
+    function toggleCodeGuide() {
+      var btn = document.getElementById('codeGuideBtn');
+      if (currentMode === 'default') {
+        currentMode = 'code_guide';
+        btn.classList.remove('bg-transparent', 'text-gray-400', 'border-gray-600');
+        btn.classList.add('bg-violet-500', 'text-white', 'border-violet-500');
+      } else {
+        currentMode = 'default';
+        btn.classList.remove('bg-violet-500', 'text-white', 'border-violet-500');
+        btn.classList.add('bg-transparent', 'text-gray-400', 'border-gray-600');
+      }
+    }
     document.getElementById('depthSlider').addEventListener('input', function() {
       document.getElementById('depthDesc').textContent = depthLabels[this.value] || '';
     });
@@ -438,7 +457,7 @@
       btn.disabled = true;
 
       try {
-        var payload = { topic: topic, depth: parseInt(document.getElementById('depthSlider').value) };
+        var payload = { topic: topic, depth: parseInt(document.getElementById('depthSlider').value), mode: currentMode };
         if (url) payload.url = url;
         if (homeFiles.length) {
           payload.files = homeFiles.map(function(f) { return { name: f.name, content: f.content }; });

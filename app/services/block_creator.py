@@ -90,6 +90,7 @@ def get_all_block_type_names() -> list[str]:
         "steps", "tip", "text", "table", "faq", "timeline", "alert",
         "badges", "checklist", "quote", "key_value", "chart",
         "progress", "accordion", "tabs", "animated_cards",
+        "file_tree", "callout", "flow_diagram",
     ]
     custom = [b["type_name"] for b in load_custom_blocks()]
     return builtin + custom

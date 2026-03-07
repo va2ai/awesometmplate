@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include 'partials/head.html' %}
+  <meta name="theme-color" content="#1e1b2e">
+  <title>{{ directory.title }} - {{ page.title }} - Code Guide</title>
+  <style>
+    body { background: #0a0a0f; }
+    .code-hero-gradient { background: linear-gradient(135deg, #1e1b2e 0%, #0f0a1a 50%, #0a0a0f 100%); }
+    .toc-card { background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15); transition: all 0.2s; }
+    .toc-card:hover { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.4); transform: translateY(-1px); }
+    .toc-num { background: rgba(139,92,246,0.15); color: #a78bfa; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .section-header-dark { border: 2px solid rgba(139,92,246,0.3); background: rgba(139,92,246,0.08); }
+    .section-header-dark:hover { border-color: rgba(139,92,246,0.5); }
+    ::selection { background: rgba(139,92,246,0.3); color: #fff; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-gray-200">
+  {% set color = "violet" %}
+
+  <!-- FIXED NAV -->
+  <header id="navbar" class="fixed left-0 right-0 z-50 backdrop-blur-md border-b transition-all duration-300 bg-gray-950/90 border-gray-800 shadow-sm">
+    <nav class="mx-auto max-w-7xl px-4 sm:px-8 lg:px-12">
+      <div class="flex h-12 sm:h-14 items-center justify-between">
+        <div class="flex items-center gap-2 min-w-0">
+          <a href="/" class="text-gray-500 hover:text-purple-400 transition-colors flex-shrink-0">
+            <iconify-icon icon="ph:house-bold" width="16"></iconify-icon>
+          </a>
+          <span class="text-gray-700">/</span>
+          <a href="/page/{{ page.slug }}" class="text-gray-500 hover:text-purple-400 transition-colors text-sm font-bold flex-shrink-0">{{ page.title }}</a>
+          <span class="text-gray-700">/</span>
+          <span class="font-black text-purple-400 text-sm tracking-tight truncate flex items-center gap-1.5">
+            <iconify-icon icon="ph:terminal-bold" width="14" class="text-purple-500"></iconify-icon>
+            {{ directory.title }}
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="openAddModal()" class="bg-purple-500/20 hover:bg-purple-500/30 active:bg-purple-500/40 text-purple-300 px-2.5 py-1.5 text-xs font-bold transition-colors flex items-center gap-1 border border-purple-500/30">
+            <iconify-icon icon="ph:plus-bold" width="14"></iconify-icon> Add
+          </button>
+          <button onclick="toggleTokenPanel()" class="bg-gray-800 hover:bg-gray-700 text-gray-400 px-2.5 py-1.5 text-xs font-bold transition-colors border border-gray-700">
+            ${{ "%.2f"|format(tokens.total_cost_usd) }}
+          </button>
+          <button onclick="toggleHamburger()" class="bg-gray-800 hover:bg-gray-700 text-gray-400 p-1.5 transition-colors border border-gray-700" aria-label="Menu">
+            <iconify-icon icon="ph:list-bold" width="18"></iconify-icon>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- HAMBURGER MENU -->
+  <div id="hamburgerMenu" class="fixed inset-0 z-[90] hidden">
+    <div class="absolute inset-0 bg-gray-950">
+      <div class="flex items-center justify-between px-4 sm:px-6 h-14 border-b border-gray-800">
+        <span class="font-black text-purple-400 text-base tracking-tight flex items-center gap-2">
+          <iconify-icon icon="ph:terminal-bold" width="18"></iconify-icon>
+          {{ directory.title }}
+        </span>
+        <button onclick="toggleHamburger()" class="text-gray-400 p-2"><iconify-icon icon="ph:x-bold" width="24"></iconify-icon></button>
+      </div>
+      <nav class="px-4 sm:px-6 pt-3 overflow-y-auto" style="max-height: calc(100vh - 4rem);">
+        <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-4 mb-2">Sections</div>
+        <div class="space-y-1 mb-4">
+          {% for section in directory.sections %}
+          <button onclick="scrollToSection('section-{{ loop.index0 }}'); toggleHamburger();"
+                  class="w-full flex items-center gap-3 px-4 py-3 text-gray-300 font-bold text-sm hover:bg-purple-500/10 active:bg-purple-500/20 transition-colors text-left">
+            <span class="text-purple-500 font-mono text-xs">{{ "%02d"|format(loop.index) }}</span>
+            <iconify-icon icon="ph:{{ section.icon_class.replace('i-ph:', '') if section.icon_class else 'folder-bold' }}" width="18" class="text-purple-400"></iconify-icon>
+            {{ section.title }}
+          </button>
+          {% endfor %}
+        </div>
+        <div class="border-t border-gray-800 pt-3 mb-2">
+          <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-4 mb-2">Navigate</div>
+        </div>
+        <div class="space-y-1">
+          <a href="/page/{{ page.slug }}" class="flex items-center gap-3 px-4 py-2.5 text-gray-500 hover:text-purple-400 font-medium text-sm hover:bg-purple-500/10 transition-colors">
+            <iconify-icon icon="ph:arrow-left-bold" width="18"></iconify-icon> Back to {{ page.title }}
+          </a>
+          <a href="/" class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:text-purple-400 font-medium text-sm hover:bg-purple-500/10 transition-colors">
+            <iconify-icon icon="ph:house-bold" width="18"></iconify-icon> Home
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- MOBILE BOTTOM BAR -->
+  <div class="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-gray-950 border-t border-gray-800 mobile-action-bar">
+    <div class="flex">
+      <a href="/page/{{ page.slug }}" class="flex-1 py-3 text-gray-400 text-xs font-bold flex items-center justify-center gap-1.5 active:bg-gray-900">
+        <iconify-icon icon="ph:arrow-left-bold" width="16"></iconify-icon> {{ page.title }}
+      </a>
+      <button onclick="openAddModal()" class="flex-1 py-3 text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 active:bg-purple-900 bg-purple-500/20 border-l border-gray-800">
+        <iconify-icon icon="ph:plus-bold" width="16"></iconify-icon> Add
+      </button>
+    </div>
+  </div>
+
+  {% include 'partials/tokens.html' %}
+
+  <!-- HERO -->
+  <header class="code-hero-gradient text-white px-6 sm:px-10 lg:px-16 pt-24 sm:pt-36 pb-12 sm:pb-20 border-b border-gray-800">
+    <div class="max-w-6xl mx-auto text-center relative">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold mb-6">
+        <iconify-icon icon="ph:terminal-bold" width="14"></iconify-icon>
+        CODE GUIDE
+      </div>
+      <h1 class="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-4 sm:mb-5 bg-gradient-to-r from-purple-400 via-violet-300 to-indigo-400 bg-clip-text text-transparent">{{ directory.title }}</h1>
+      <p class="text-base sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 sm:mb-14 leading-relaxed">{{ directory.subtitle }}</p>
+
+      <!-- TOC GRID -->
+      {% if directory.sections %}
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto">
+        {% for section in directory.sections %}
+        <button onclick="scrollToSection('section-{{ loop.index0 }}')" class="toc-card px-3 py-3 text-left group">
+          <div class="flex items-start gap-2.5">
+            <span class="toc-num w-7 h-7 flex items-center justify-center text-xs font-bold flex-shrink-0">{{ "%02d"|format(loop.index) }}</span>
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-gray-300 group-hover:text-purple-300 transition-colors truncate">{{ section.title }}</div>
+              {% if section.description %}
+              <div class="text-[10px] text-gray-600 mt-0.5 truncate">{{ section.description }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10 pb-20 sm:pb-10 relative flex-1">
+    <div class="lg:columns-2 lg:gap-8">
+    {% for section in directory.sections %}
+    {% set section_loop_idx = loop.index0 %}
+    <div id="section-{{ loop.index0 }}" class="mb-8 relative z-10 break-inside-avoid-column">
+
+      <!-- SECTION HEADER -->
+      <div class="section-header-dark px-4 py-3 mb-4">
+        <h2 class="text-xl font-black flex items-center gap-2 text-gray-100">
+          <span class="text-purple-500 font-mono text-sm mr-1">{{ "%02d"|format(loop.index) }}</span>
+          <iconify-icon icon="ph:{{ section.icon_class.replace('i-ph:', '') if section.icon_class else 'folder-bold' }}" class="text-purple-400"></iconify-icon>
+          {{ section.title }}
+          <span class="ml-auto flex items-center gap-2">
+            {% if section.stars %}
+            <span class="bg-purple-500/20 px-2 py-0.5 text-xs font-bold flex items-center gap-1 text-purple-300 border border-purple-500/30">
+              <iconify-icon icon="ph:star-fill"></iconify-icon> {{ section.stars }}
+            </span>
+            {% endif %}
+            <button onclick="expandSection(this.dataset.section)"
+                    data-section="{{ section.title }}"
+                    class="bg-purple-500/15 hover:bg-purple-500/25 active:bg-purple-500/35 px-2.5 py-0.5 text-xs font-bold flex items-center gap-1 transition-colors text-purple-300 border border-purple-500/20"
+                    title="Expand this section with more detail">
+              <iconify-icon icon="ph:arrows-out-bold" width="14"></iconify-icon> Expand
+            </button>
+          </span>
+        </h2>
+      </div>
+
+      {% if section.description or section.url %}
+      <div class="mb-4">
+        <p class="text-sm text-gray-500 max-w-3xl" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">{{ section.description }}</p>
+        {% if section.url %}
+        <a href="{{ section.url }}" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 mt-1.5">
+          <iconify-icon icon="ph:arrow-up-right"></iconify-icon>
+          {{ section.url | replace('https://', '') | replace('http://', '') }}
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% include 'partials/blocks_code.html' %}
+    </div>
+    {% endfor %}
+    </div>
+
+    {% if not directory.sections %}
+    <div class="text-center py-20 text-gray-600">
+      <iconify-icon icon="ph:terminal-bold" width="64" class="mb-4 text-gray-700"></iconify-icon>
+      <p class="text-lg">No content yet</p>
+    </div>
+    {% endif %}
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-gray-950 border-t border-gray-800 mt-10 sm:mt-16 mb-14 sm:mb-0 safe-bottom">
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 sm:py-14">
+      <div class="border-t border-gray-800 pt-8 pb-4 text-sm text-gray-600">
+        Powered by Claude AI &bull; Built with FastAPI
+      </div>
+    </div>
+  </footer>
+
+  <!-- ADD CONTENT MODAL -->
+  <div id="addModal" class="fixed inset-0 z-[100] hidden">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModals()"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center sm:p-4">
+      <div class="bg-gray-900 border border-gray-700 w-full sm:max-w-lg relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-none safe-bottom">
+        <div class="bg-purple-500/20 text-purple-300 px-4 py-3 border-b border-gray-700 sticky top-0 z-10 rounded-t-2xl sm:rounded-none flex items-center justify-between">
+          <h2 class="font-black flex items-center gap-2 text-sm">
+            <iconify-icon icon="ph:plus-bold"></iconify-icon> Add to {{ directory.title }}
+          </h2>
+          <button onclick="closeModals()" class="text-gray-500 hover:text-gray-300"><iconify-icon icon="ph:x-bold" width="18"></iconify-icon></button>
+        </div>
+        <div class="p-4 space-y-3">
+          <textarea id="addTopic" rows="3" placeholder="Type a topic or describe what to add..."
+                    class="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 resize-none placeholder-gray-600"
+                    enterkeyhint="send"></textarea>
+          <details class="group">
+            <summary class="text-[11px] font-bold text-gray-500 cursor-pointer hover:text-gray-400 flex items-center gap-1 select-none">
+              <iconify-icon icon="ph:caret-right-bold" width="12" class="group-open:rotate-90 transition-transform"></iconify-icon>
+              Attach URLs or files
+            </summary>
+            <div class="mt-3 space-y-3">
+              <div id="urlList" class="space-y-2">
+                <div class="flex gap-2 url-row">
+                  <input type="url" placeholder="https://example.com/docs" class="url-input flex-1 px-3 py-2 bg-gray-800 border border-gray-700 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 placeholder-gray-600">
+                  <button type="button" onclick="addUrlRow()" class="px-3 py-2 border border-gray-700 text-sm font-bold text-gray-400 hover:bg-gray-800 flex-shrink-0">
+                    <iconify-icon icon="ph:plus-bold"></iconify-icon>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div id="fileDropZone" class="border border-dashed border-gray-700 hover:border-purple-500/50 bg-gray-800/50 hover:bg-purple-500/5 transition-colors p-3 text-center cursor-pointer"
+                     onclick="document.getElementById('fileInput').click()"
+                     ondragover="event.preventDefault(); this.classList.add('border-purple-500/50', 'bg-purple-500/5')"
+                     ondragleave="this.classList.remove('border-purple-500/50', 'bg-purple-500/5')"
+                     ondrop="handleFileDrop(event)">
+                  <iconify-icon icon="ph:upload-bold" width="20" class="text-gray-600"></iconify-icon>
+                  <p class="text-[11px] text-gray-600">Drop files or click to browse</p>
+                  <input id="fileInput" type="file" multiple accept=".txt,.md,.json,.csv,.html,.py,.js,.ts,.pdf,.xml,.yaml,.yml,.toml,.log,.rst,.tex" class="hidden" onchange="handleFileSelect(this.files)">
+                </div>
+                <div id="filePreviewList" class="space-y-1 mt-2"></div>
+              </div>
+            </div>
+          </details>
+          <button onclick="doAddContent()" id="addContentBtn"
+                  class="w-full bg-purple-600 hover:bg-purple-500 text-white px-4 py-3 font-bold border border-purple-500 transition-colors text-sm">
+            <iconify-icon icon="ph:sparkle-bold" class="mr-1"></iconify-icon> Add with Claude
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include 'partials/jobs.html' %}
+
+  <script>
+    var PAGE_SLUG = '{{ page.slug }}';
+    var TOPIC_SLUG = '{{ topic_slug }}';
+    var uploadedFiles = [];
+
+    function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); document.getElementById('addTopic').focus(); }
+    function closeModals() { document.getElementById('addModal').classList.add('hidden'); }
+    function toggleHamburger() { document.getElementById('hamburgerMenu').classList.toggle('hidden'); }
+
+    function addUrlRow() {
+      var list = document.getElementById('urlList');
+      var row = document.createElement('div');
+      row.className = 'flex gap-2 url-row';
+      var input = document.createElement('input');
+      input.type = 'url'; input.placeholder = 'https://...';
+      input.className = 'url-input flex-1 px-3 py-2 bg-gray-800 border border-gray-700 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 placeholder-gray-600';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'px-3 py-2 border border-gray-700 text-sm font-bold text-red-400 hover:bg-gray-800 flex-shrink-0';
+      btn.textContent = 'X'; btn.onclick = function() { row.remove(); };
+      row.appendChild(input); row.appendChild(btn); list.appendChild(row);
+    }
+
+    function handleFileDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('border-purple-500/50', 'bg-purple-500/5');
+      handleFileSelect(e.dataTransfer.files);
+    }
+
+    function handleFileSelect(files) {
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var reader = new FileReader();
+        reader.onload = (function(f) {
+          return function(e) { uploadedFiles.push({ name: f.name, content: e.target.result, size: f.size }); renderFileList(); };
+        })(file);
+        reader.readAsText(file);
+      }
+    }
+
+    function removeFile(idx) { uploadedFiles.splice(idx, 1); renderFileList(); }
+
+    function renderFileList() {
+      var list = document.getElementById('filePreviewList');
+      while (list.firstChild) list.removeChild(list.firstChild);
+      uploadedFiles.forEach(function(f, i) {
+        var div = document.createElement('div');
+        div.className = 'flex items-center gap-2 bg-gray-800 border border-gray-700 px-3 py-1.5 text-xs';
+        var icon = document.createElement('iconify-icon');
+        icon.setAttribute('icon', 'ph:file-text-bold');
+        icon.className = 'text-gray-500';
+        var name = document.createElement('span');
+        name.className = 'flex-1 font-bold text-gray-300 truncate';
+        name.textContent = f.name;
+        var size = document.createElement('span');
+        size.className = 'text-gray-600';
+        size.textContent = (f.size/1024).toFixed(1) + ' KB';
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'text-red-400 hover:text-red-300';
+        removeBtn.textContent = 'X';
+        removeBtn.onclick = (function(idx) { return function() { removeFile(idx); }; })(i);
+        div.appendChild(icon); div.appendChild(name); div.appendChild(size); div.appendChild(removeBtn);
+        list.appendChild(div);
+      });
+    }
+
+    async function expandSection(sectionTitle) {
+      try {
+        var res = await fetch('/api/page/' + PAGE_SLUG + '/' + TOPIC_SLUG + '/smart-add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: 'Expand on: ' + sectionTitle, description: 'Add more depth and detail to the "' + sectionTitle + '" section with additional blocks covering subtopics, examples, and insights not yet covered.' })
+        });
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        addJob(data.jobId, 'Expanding: ' + sectionTitle);
+      } catch (e) { /* toast handles errors */ }
+    }
+
+    async function doAddContent() {
+      var input = document.getElementById('addTopic').value.trim();
+      var urls = [];
+      document.querySelectorAll('.url-input').forEach(function(el) {
+        var val = el.value.trim();
+        if (val) urls.push(val);
+      });
+      var hasUrls = urls.length > 0;
+      var hasFiles = uploadedFiles.length > 0;
+      if (!input && !hasUrls && !hasFiles) return;
+      closeModals();
+      try {
+        var res;
+        if (hasUrls || hasFiles) {
+          res = await fetch('/api/page/' + PAGE_SLUG + '/' + TOPIC_SLUG + '/research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic: input, urls: urls, files: uploadedFiles.map(function(f) { return { name: f.name, content: f.content }; }), instructions: '' })
+          });
+        } else {
+          res = await fetch('/api/page/' + PAGE_SLUG + '/' + TOPIC_SLUG + '/smart-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic: input, description: '' })
+          });
+        }
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        document.getElementById('addTopic').value = '';
+        uploadedFiles = [];
+        addJob(data.jobId, input ? input.substring(0, 60) : 'Research');
+      } catch (e) { /* toast handles errors */ }
+    }
+
+    window.addEventListener('scroll', function() {
+      var nav = document.getElementById('navbar');
+      if (window.scrollY > 100) { nav.classList.add('shadow-lg'); }
+      else { nav.classList.remove('shadow-lg'); }
+    });
+  </script>
+</body>
+</html>

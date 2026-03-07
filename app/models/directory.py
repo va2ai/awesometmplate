@@ -24,6 +24,7 @@ class Directory(BaseModel):
     """A topic's full content: title, subtitle, and sections with blocks."""
     title: str
     subtitle: str = ""
+    theme: str = "default"
     sections: list[Section] = []
 
 
