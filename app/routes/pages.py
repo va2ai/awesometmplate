@@ -62,8 +62,9 @@ async def topic_view(request: Request, slug: str, topic_slug: str):
     config = load_site_config()
     custom_blocks = {b["type_name"]: b for b in load_custom_blocks()}
     from app import templates
+    template_name = "topic_code.html" if directory.theme == "code_guide" else "topic.html"
     return templates.TemplateResponse(
-        "topic.html", {
+        template_name, {
             "request": request, "page": page, "topic_entry": topic_entry,
             "directory": directory, "tokens": tokens, "config": config,
             "custom_blocks": custom_blocks, "topic_slug": topic_slug,

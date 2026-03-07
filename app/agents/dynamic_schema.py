@@ -13,7 +13,8 @@ def _get_block_enum():
     return [
         "link_list", "code_grid", "info_grid", "comparison", "stats",
         "steps", "tip", "text", "table", "faq", "timeline", "alert",
-        "badges", "checklist",
+        "badges", "checklist", "quote", "key_value", "chart", "progress",
+        "accordion", "tabs", "file_tree", "callout", "flow_diagram",
     ] + [b["type_name"] for b in load_custom_blocks()]
 
 
@@ -33,7 +34,16 @@ def _get_content_description():
         "timeline: {events: [{date, title, description}]}. "
         "alert: {text: str, severity: 'info'|'warning'|'error'|'success'}. "
         "badges: {items: [{label, color}]}. "
-        "checklist: {items: [{text, checked: bool}]}."
+        "checklist: {items: [{text, checked: bool}]}. "
+        "quote: {text: str, attribution: str, source: str}. "
+        "key_value: {items: [{key: str, value: str}]}. "
+        "chart: {type: 'bar'|'pie'|'line'|'doughnut', title: str, labels: [str], datasets: [{label: str, data: [number], color: str}]}. "
+        "progress: {items: [{label: str, value: number, max: number, color: str}]}. "
+        "accordion: {items: [{title: str, content: str}]}. "
+        "tabs: {tabs: [{label: str, content: str}]}. "
+        "file_tree: {items: [{name: str, type: 'dir'|'file', indent: number, comment: str}]}. "
+        "callout: {text: str, title: str, color: 'purple'|'amber'|'emerald'|'rose', icon: str}. "
+        "flow_diagram: {nodes: [{text: str, type: 'normal'|'highlight'|'sub'}]}."
     )
     custom_desc = get_schema_description_for_custom()
     if custom_desc:

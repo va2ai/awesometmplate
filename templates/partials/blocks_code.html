@@ -1,0 +1,698 @@
+{# Dark-themed block renderers for code_guide theme. Expects: section, section_loop_idx, custom_blocks #}
+
+{% for block in section.blocks %}
+<div class="reveal">
+
+  {% if block.label %}
+  <div class="mb-2 mt-4">
+    <span class="inline-block bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-xs font-bold text-purple-400 uppercase tracking-wide">
+      {{ block.label }}
+    </span>
+  </div>
+  {% endif %}
+
+  {# CODE GRID #}
+  {% if block.type == "code_grid" %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+    {% for card in block.content.get("cards", []) %}
+    <div class="bg-gray-900 border border-gray-700 hover:border-purple-500/40 transition-colors overflow-hidden">
+      <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-800 bg-gray-800/50">
+        {% set lang = card.get("language", "text") %}
+        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider font-mono">{{ lang }}</span>
+        <span class="text-[10px] text-gray-600">{{ card.get("title", "") }}</span>
+      </div>
+      {% if card.get("description") %}
+      <div class="px-3 py-2 border-b border-gray-800">
+        <p class="text-xs text-gray-500">{{ card.get("description", "") }}</p>
+      </div>
+      {% endif %}
+      {% if card.get("code") %}
+      <div class="p-3">
+        <div class="text-green-400 font-mono text-xs relative group overflow-x-auto">
+          <pre><code>{{ card.get("code", "") }}</code></pre>
+          <button onclick="copyCode(this)" class="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 border border-gray-700 copy-btn">
+            <iconify-icon icon="ph:copy-bold" class="text-gray-500 hover:text-purple-400"></iconify-icon>
+          </button>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# FILE TREE (NEW) #}
+  {% elif block.type == "file_tree" %}
+  <div class="bg-gray-900 border border-gray-700 mb-6 p-4 font-mono text-sm overflow-x-auto">
+    {% for item in block.content.get("items", []) %}
+    {% set indent = item.get("depth", 0) %}
+    {% set is_dir = item.get("is_directory", false) %}
+    <div class="flex items-center gap-1.5 py-0.5" style="padding-left: {{ indent * 20 }}px;">
+      {% if indent > 0 %}
+      <span class="text-gray-700 select-none">{% if loop.last %}&boxur;{% else %}&boxvr;{% endif %}&HorizontalLine;</span>
+      {% endif %}
+      {% if is_dir %}
+      <iconify-icon icon="ph:folder-bold" width="14" class="text-purple-400 flex-shrink-0"></iconify-icon>
+      <span class="text-purple-300 font-bold">{{ item.get("name", "") }}/</span>
+      {% else %}
+      <iconify-icon icon="ph:file-bold" width="14" class="text-gray-600 flex-shrink-0"></iconify-icon>
+      <span class="text-gray-400">{{ item.get("name", "") }}</span>
+      {% endif %}
+      {% if item.get("description") %}
+      <span class="text-gray-600 text-xs ml-2">// {{ item.get("description") }}</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# CALLOUT (NEW) #}
+  {% elif block.type == "callout" %}
+  {% set severity = block.content.get("severity", "info") %}
+  {% if severity == "warning" %}
+  {% set co_border = "border-amber-500/40" %}{% set co_bg = "bg-amber-500/5" %}{% set co_icon = "ph:warning-bold" %}{% set co_text = "text-amber-400" %}
+  {% elif severity == "error" or severity == "danger" %}
+  {% set co_border = "border-rose-500/40" %}{% set co_bg = "bg-rose-500/5" %}{% set co_icon = "ph:x-circle-bold" %}{% set co_text = "text-rose-400" %}
+  {% elif severity == "success" or severity == "tip" %}
+  {% set co_border = "border-emerald-500/40" %}{% set co_bg = "bg-emerald-500/5" %}{% set co_icon = "ph:check-circle-bold" %}{% set co_text = "text-emerald-400" %}
+  {% else %}
+  {% set co_border = "border-purple-500/40" %}{% set co_bg = "bg-purple-500/5" %}{% set co_icon = "ph:info-bold" %}{% set co_text = "text-purple-400" %}
+  {% endif %}
+  <div class="{{ co_bg }} border-l-4 {{ co_border }} border border-gray-800 p-4 mb-6 flex items-start gap-3">
+    <iconify-icon icon="{{ co_icon }}" width="20" class="{{ co_text }} flex-shrink-0 mt-0.5"></iconify-icon>
+    <div>
+      {% if block.content.get("title") %}
+      <div class="text-xs font-bold {{ co_text }} uppercase mb-1">{{ block.content.get("title") }}</div>
+      {% endif %}
+      <p class="text-sm text-gray-300 leading-relaxed">{{ block.content.get("text", "") }}</p>
+    </div>
+  </div>
+
+  {# FLOW DIAGRAM (NEW) #}
+  {% elif block.type == "flow_diagram" %}
+  <div class="mb-6 flex flex-col items-center gap-0">
+    {% for node in block.content.get("nodes", []) %}
+    {% set node_color = node.get("color", "purple") %}
+    <div class="w-full max-w-md bg-gray-900 border border-gray-700 px-4 py-3 text-center hover:border-{{ node_color }}-500/40 transition-colors">
+      <div class="flex items-center justify-center gap-2">
+        {% if node.get("icon") %}
+        <iconify-icon icon="ph:{{ node.get('icon', 'circle-bold').replace('i-ph:', '') }}" width="16" class="text-{{ node_color }}-400"></iconify-icon>
+        {% endif %}
+        <span class="text-sm font-bold text-gray-200">{{ node.get("label", "") }}</span>
+      </div>
+      {% if node.get("description") %}
+      <p class="text-xs text-gray-500 mt-1">{{ node.get("description") }}</p>
+      {% endif %}
+    </div>
+    {% if not loop.last %}
+    <div class="flex flex-col items-center py-1">
+      <div class="w-px h-4 bg-purple-500/40"></div>
+      <iconify-icon icon="ph:caret-down-bold" width="14" class="text-purple-500/60"></iconify-icon>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {# LINK LIST #}
+  {% elif block.type == "link_list" %}
+  <div class="mb-6 border border-gray-700 bg-gray-900">
+    {% for item in block.content.get("items", []) %}
+    <a href="{{ item.get('url', '#') }}" target="_blank" rel="noopener"
+       class="flex items-start gap-3 p-3 hover:bg-gray-800 transition-colors border-b border-gray-800 last:border-b-0">
+      {% if item.get("url") %}
+      <img src="https://www.google.com/s2/favicons?domain={{ item.get('url', '') }}&sz=32"
+           alt="" class="w-5 h-5 flex-shrink-0 rounded mt-0.5" onerror="this.style.display='none'">
+      {% else %}
+      <iconify-icon icon="ph:link-bold" class="w-5 h-5 flex-shrink-0 text-gray-600 mt-0.5"></iconify-icon>
+      {% endif %}
+      <div class="flex-1 min-w-0 overflow-hidden">
+        {% if item.get("title") %}
+        <div class="flex items-center justify-between mb-0.5">
+          <h3 class="text-sm font-bold text-gray-200 truncate">{{ item.get("title", "") }}</h3>
+          {% if item.get("stars") %}
+          <div class="bg-purple-500/20 text-purple-300 px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 ml-2 flex-shrink-0 border border-purple-500/30">
+            <iconify-icon icon="ph:star-fill"></iconify-icon> {{ item.get("stars", "") }}
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% if item.get("description") %}
+        <p class="text-xs text-gray-500" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ item.get("description", "") }}</p>
+        {% endif %}
+        {% if item.get("url") %}
+        <div class="text-[11px] text-purple-400 mt-1 truncate">{{ item.get("url", "") | replace('https://', '') | replace('http://', '') }}</div>
+        {% endif %}
+      </div>
+      <iconify-icon icon="ph:arrow-up-right" class="text-gray-600 flex-shrink-0 mt-0.5"></iconify-icon>
+    </a>
+    {% endfor %}
+  </div>
+
+  {# INFO GRID #}
+  {% elif block.type == "info_grid" %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+    {% for card in block.content.get("cards", []) %}
+    <div class="bg-gray-900 border border-gray-700 p-4 hover:border-purple-500/40 transition-colors">
+      <div class="flex items-start gap-3">
+        {% if card.get("icon") %}
+        <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-purple-400 flex-shrink-0 mt-0.5"></iconify-icon>
+        {% endif %}
+        <div>
+          <h3 class="text-sm font-bold text-gray-200">{{ card.get("title", "") }}</h3>
+          {% if card.get("description") %}
+          <p class="text-xs text-gray-500 mt-1">{{ card.get("description", "") }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# COMPARISON #}
+  {% elif block.type == "comparison" %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+    {% for item in block.content.get("items", []) %}
+    <div class="bg-gray-900 border border-gray-700">
+      <div class="px-4 py-2 border-b border-gray-800 bg-gray-800/50">
+        <h3 class="text-sm font-black {% if 'pro' in item.get('label', '').lower() %}text-emerald-400{% elif 'con' in item.get('label', '').lower() %}text-rose-400{% else %}text-gray-200{% endif %}">
+          {% if 'pro' in item.get('label', '').lower() %}<iconify-icon icon="ph:check-circle-bold" class="mr-1"></iconify-icon>
+          {% elif 'con' in item.get('label', '').lower() %}<iconify-icon icon="ph:x-circle-bold" class="mr-1"></iconify-icon>
+          {% endif %}{{ item.get("label", "") }}
+        </h3>
+      </div>
+      <ul class="p-4 space-y-2">
+        {% for point in item.get("points", []) %}
+        <li class="text-xs text-gray-400 flex items-start gap-2"><span class="text-gray-600 mt-0.5">-</span><span>{{ point }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# STATS #}
+  {% elif block.type == "stats" %}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    {% for card in block.content.get("cards", []) %}
+    <div class="bg-gray-900 border border-gray-700 p-3 sm:p-4 text-center hover:border-purple-500/40 transition-colors">
+      <div class="text-2xl font-black text-purple-400">{{ card.get("value", "") }}</div>
+      <div class="text-xs font-bold text-gray-300 mt-1">{{ card.get("label", "") }}</div>
+      {% if card.get("description") %}
+      <div class="text-[10px] text-gray-600 mt-1">{{ card.get("description", "") }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# STEPS #}
+  {% elif block.type == "steps" %}
+  <div class="space-y-4 mb-6">
+    {% for step in block.content.get("items", []) %}
+    <div class="bg-gray-900 border border-gray-700 hover:border-purple-500/40 transition-colors">
+      <div class="flex items-start gap-4 p-4">
+        <div class="bg-purple-500/20 text-purple-400 w-8 h-8 flex items-center justify-center font-black text-sm flex-shrink-0 border border-purple-500/30 font-mono">
+          {{ loop.index }}
+        </div>
+        <div class="flex-1">
+          <h3 class="text-sm font-bold text-gray-200">{{ step.get("title", "") }}</h3>
+          {% if step.get("description") %}
+          <p class="text-xs text-gray-500 mt-1">{{ step.get("description", "") }}</p>
+          {% endif %}
+          {% if step.get("code") %}
+          <div class="mt-2 bg-gray-950 text-green-400 px-3 py-2 font-mono text-xs relative group overflow-x-auto border border-gray-800">
+            <pre><code>{{ step.get("code", "") }}</code></pre>
+            <button onclick="copyCode(this)" class="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 border border-gray-700 copy-btn">
+              <iconify-icon icon="ph:copy-bold" class="text-gray-500 hover:text-purple-400"></iconify-icon>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# TIP #}
+  {% elif block.type == "tip" %}
+  <div class="bg-amber-500/5 border border-amber-500/20 border-l-4 border-l-amber-500/40 p-4 mb-6 flex items-start gap-3">
+    <iconify-icon icon="ph:lightbulb-bold" width="20" class="text-amber-400 flex-shrink-0 mt-0.5"></iconify-icon>
+    <div>
+      {% if block.label %}<span class="text-xs font-bold text-amber-400 uppercase">{{ block.label }}</span>{% endif %}
+      <p class="text-sm text-gray-300">{{ block.content.get("text", "") }}</p>
+    </div>
+  </div>
+
+  {# TEXT #}
+  {% elif block.type == "text" %}
+  <div class="bg-gray-900 border border-gray-800 p-4 mb-6">
+    <p class="text-sm text-gray-400 leading-relaxed">{{ block.content.get("text", "") }}</p>
+  </div>
+
+  {# TABLE #}
+  {% elif block.type == "table" %}
+  <div class="mb-6 overflow-x-auto">
+    <table class="w-full bg-gray-900 border border-gray-700 text-sm">
+      <thead>
+        <tr class="bg-gray-800 border-b border-gray-700">
+          {% for header in block.content.get("headers", []) %}
+          <th class="px-4 py-2 text-left font-bold text-xs uppercase text-gray-400 border-r border-gray-700 last:border-r-0">{{ header }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in block.content.get("rows", []) %}
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+          {% for cell in row.get("cells", []) if row is mapping %}
+          <td class="px-4 py-2 text-gray-400 border-r border-gray-800 last:border-r-0">{{ cell }}</td>
+          {% endfor %}
+          {% if row is sequence and row is not mapping %}
+          {% for cell in row %}
+          <td class="px-4 py-2 text-gray-400 border-r border-gray-800 last:border-r-0">{{ cell }}</td>
+          {% endfor %}
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# FAQ #}
+  {% elif block.type == "faq" %}
+  <div class="space-y-3 mb-6">
+    {% for item in block.content.get("items", []) %}
+    <details class="bg-gray-900 border border-gray-700 group">
+      <summary class="px-4 py-3 cursor-pointer hover:bg-gray-800 transition-colors flex items-center justify-between">
+        <span class="text-sm font-bold text-gray-200 flex items-center gap-2">
+          <iconify-icon icon="ph:question-bold" class="text-purple-400"></iconify-icon>
+          {{ item.get("question", "") }}
+        </span>
+        <iconify-icon icon="ph:caret-down-bold" class="text-gray-600 transition-transform group-open:rotate-180"></iconify-icon>
+      </summary>
+      <div class="px-4 py-3 border-t border-gray-800 text-sm text-gray-400 leading-relaxed">{{ item.get("answer", "") }}</div>
+    </details>
+    {% endfor %}
+  </div>
+
+  {# TIMELINE #}
+  {% elif block.type == "timeline" %}
+  <div class="mb-6 space-y-2">
+    {% for event in block.content.get("events", []) %}
+    <div class="flex items-stretch bg-gray-900 border border-gray-700 hover:border-purple-500/40 transition-colors overflow-hidden">
+      <div class="bg-purple-500/15 w-28 flex-shrink-0 flex flex-col items-center justify-center px-3 py-3 border-r border-gray-700">
+        <div class="w-3 h-3 bg-purple-500 rounded-full mb-1.5"></div>
+        {% if event.get("date") %}
+        <span class="text-xs font-black text-purple-400 uppercase text-center leading-tight font-mono">{{ event.get("date", "") }}</span>
+        {% endif %}
+      </div>
+      <div class="flex-1 px-4 py-3">
+        <h4 class="text-sm font-bold text-gray-200">{{ event.get("title", "") }}</h4>
+        {% if event.get("description") %}
+        <p class="text-xs text-gray-500 mt-1">{{ event.get("description", "") }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ALERT #}
+  {% elif block.type == "alert" %}
+  {% set severity = block.content.get("severity", "info") %}
+  {% if severity == "warning" %}
+  {% set alert_bg = "bg-amber-500/5" %}{% set alert_border = "border-amber-500/40" %}{% set alert_icon = "ph:warning-bold" %}{% set alert_text = "text-amber-400" %}
+  {% elif severity == "error" %}
+  {% set alert_bg = "bg-rose-500/5" %}{% set alert_border = "border-rose-500/40" %}{% set alert_icon = "ph:x-circle-bold" %}{% set alert_text = "text-rose-400" %}
+  {% elif severity == "success" %}
+  {% set alert_bg = "bg-emerald-500/5" %}{% set alert_border = "border-emerald-500/40" %}{% set alert_icon = "ph:check-circle-bold" %}{% set alert_text = "text-emerald-400" %}
+  {% else %}
+  {% set alert_bg = "bg-purple-500/5" %}{% set alert_border = "border-purple-500/40" %}{% set alert_icon = "ph:info-bold" %}{% set alert_text = "text-purple-400" %}
+  {% endif %}
+  <div class="{{ alert_bg }} border border-gray-800 border-l-4 {{ alert_border }} p-4 mb-6 flex items-start gap-3">
+    <iconify-icon icon="{{ alert_icon }}" width="20" class="{{ alert_text }} flex-shrink-0 mt-0.5"></iconify-icon>
+    <div>
+      {% if block.label %}<span class="text-xs font-bold {{ alert_text }} uppercase">{{ block.label }}</span>{% endif %}
+      <p class="text-sm text-gray-300">{{ block.content.get("text", "") }}</p>
+    </div>
+  </div>
+
+  {# BADGES #}
+  {% elif block.type == "badges" %}
+  <div class="flex flex-wrap gap-2 mb-6">
+    {% for badge in block.content.get("items", []) %}
+    {% set badge_color = badge.get("color", "purple") %}
+    <span class="inline-flex items-center px-3 py-1.5 text-xs font-bold border border-{{ badge_color }}-500/30 bg-{{ badge_color }}-500/10 text-{{ badge_color }}-400 hover:bg-{{ badge_color }}-500/20 transition-colors">
+      <iconify-icon icon="ph:tag-bold" class="mr-1.5" width="12"></iconify-icon>
+      {{ badge.get("label", "") }}
+    </span>
+    {% endfor %}
+  </div>
+
+  {# CHECKLIST #}
+  {% elif block.type == "checklist" %}
+  <div class="bg-gray-900 border border-gray-700 mb-6">
+    {% for item in block.content.get("items", []) %}
+    <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-800 last:border-b-0 hover:bg-gray-800/50 transition-colors">
+      {% if item.get("checked") %}
+      <iconify-icon icon="ph:check-square-bold" width="18" class="text-emerald-500 flex-shrink-0"></iconify-icon>
+      <span class="text-sm text-gray-600 line-through">{{ item.get("text", "") }}</span>
+      {% else %}
+      <iconify-icon icon="ph:square-bold" width="18" class="text-gray-600 flex-shrink-0"></iconify-icon>
+      <span class="text-sm text-gray-400">{{ item.get("text", "") }}</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# QUOTE #}
+  {% elif block.type == "quote" %}
+  <div class="bg-gray-900 border border-gray-700 mb-6 p-5 relative">
+    <iconify-icon icon="ph:quotes-bold" width="28" class="text-purple-500/30 absolute top-3 left-4"></iconify-icon>
+    <blockquote class="pl-8 text-sm text-gray-300 italic leading-relaxed">{{ block.content.get("text", "") }}</blockquote>
+    {% if block.content.get("attribution") %}
+    <div class="mt-3 pl-8 text-xs font-bold text-gray-400">-- {{ block.content.get("attribution", "") }}{% if block.content.get("source") %}, <span class="font-normal text-gray-600">{{ block.content.get("source", "") }}</span>{% endif %}</div>
+    {% endif %}
+  </div>
+
+  {# KEY VALUE #}
+  {% elif block.type == "key_value" %}
+  <div class="bg-gray-900 border border-gray-700 mb-6 divide-y divide-gray-800">
+    {% for item in block.content.get("items", []) %}
+    <div class="flex flex-col sm:flex-row px-4 py-2.5">
+      <span class="text-xs font-bold text-gray-300 sm:w-1/3 flex-shrink-0 font-mono">{{ item.get("key", "") }}</span>
+      <span class="text-xs text-gray-500 sm:w-2/3 mt-0.5 sm:mt-0">{{ item.get("value", "") }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# CHART #}
+  {% elif block.type == "chart" %}
+  <div class="bg-gray-900 border border-gray-700 mb-6 p-4">
+    <canvas id="chart-{{ section_loop_idx }}-{{ loop.index0 }}" class="w-full" style="max-height:300px;"></canvas>
+    <script>
+    (function(){
+      var ctx = document.getElementById('chart-{{ section_loop_idx }}-{{ loop.index0 }}');
+      var colorMap = {blue:'96,165,250',red:'248,113,113',green:'52,211,153',orange:'251,146,60',violet:'167,139,250',pink:'244,114,182',yellow:'250,204,21',indigo:'129,140,248',purple:'192,132,252'};
+      var datasets = [];
+      {% for ds in block.content.get("datasets", []) %}
+      (function(){
+        var c = colorMap['{{ ds.get("color","purple") }}'] || '192,132,252';
+        datasets.push({
+          label: '{{ ds.get("label","") }}',
+          data: {{ ds.get("data",[])|tojson }},
+          backgroundColor: '{{ block.content.get("type","bar") }}' === 'line' ? 'rgba('+c+',0.1)' : {{ ds.get("data",[])|tojson }}.map(function(_,i){var colors=[c,'248,113,113','52,211,153','251,146,60','167,139,250','244,114,182'];return 'rgba('+(colors[i%colors.length]||c)+',0.7)';}),
+          borderColor: 'rgb('+c+')',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: '{{ block.content.get("type","bar") }}' === 'line'
+        });
+      })();
+      {% endfor %}
+      new Chart(ctx, {
+        type: '{{ block.content.get("type","bar") }}',
+        data: { labels: {{ block.content.get("labels",[])|tojson }}, datasets: datasets },
+        options: {
+          responsive: true,
+          animation: { duration: 1200, easing: 'easeOutQuart' },
+          plugins: {
+            title: { display: {{ 'true' if block.content.get('title') else 'false' }}, text: '{{ block.content.get("title","") }}', font: {weight:'bold',size:14}, color: '#d1d5db' },
+            legend: { display: datasets.length > 1, labels: { color: '#9ca3af' } }
+          },
+          scales: '{{ block.content.get("type","bar") }}' === 'pie' || '{{ block.content.get("type","bar") }}' === 'doughnut' ? {} : {
+            y: { beginAtZero: true, ticks: { color: '#6b7280' }, grid: { color: 'rgba(75,85,99,0.3)' } },
+            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(75,85,99,0.3)' } }
+          }
+        }
+      });
+    })();
+    </script>
+  </div>
+
+  {# PROGRESS #}
+  {% elif block.type == "progress" %}
+  <div class="bg-gray-900 border border-gray-700 mb-6 p-4 space-y-3">
+    {% for item in block.content.get("items", []) %}
+    {% set pct = (item.get("value",0) / item.get("max",100) * 100)|round|int %}
+    {% set pcolor = item.get("color", "purple") %}
+    <div>
+      <div class="flex justify-between mb-1">
+        <span class="text-xs font-bold text-gray-300">{{ item.get("label","") }}</span>
+        <span class="text-xs font-bold text-{{ pcolor }}-400">{{ item.get("value",0) }}/{{ item.get("max",100) }}</span>
+      </div>
+      <div class="w-full bg-gray-800 h-3 border border-gray-700 overflow-hidden">
+        <div class="progress-bar h-full bg-{{ pcolor }}-500 transition-all duration-1000 ease-out" style="width:0%;" data-width="{{ pct }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ACCORDION #}
+  {% elif block.type == "accordion" %}
+  <div class="bg-gray-900 border border-gray-700 mb-6 divide-y divide-gray-800">
+    {% for item in block.content.get("items", []) %}
+    <details class="group">
+      <summary class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-800/50 transition-colors select-none">
+        <span class="text-sm font-bold text-gray-200">{{ item.get("title","") }}</span>
+        <iconify-icon icon="ph:caret-down-bold" width="14" class="text-gray-600 group-open:rotate-180 transition-transform duration-200"></iconify-icon>
+      </summary>
+      <div class="px-4 pb-3 text-sm text-gray-400 leading-relaxed">{{ item.get("content","") }}</div>
+    </details>
+    {% endfor %}
+  </div>
+
+  {# TABS #}
+  {% elif block.type == "tabs" %}
+  {% set tabs_id = "tabs-" ~ section_loop_idx ~ "-" ~ loop.index0 %}
+  <div class="bg-gray-900 border border-gray-700 mb-6" id="{{ tabs_id }}">
+    <div class="flex border-b border-gray-700 overflow-x-auto">
+      {% for tab in block.content.get("tabs", []) %}
+      <button onclick="switchTab('{{ tabs_id }}', {{ loop.index0 }})"
+              class="tab-btn px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors border-r border-gray-800 last:border-r-0 {% if loop.first %}bg-purple-500/20 text-purple-300 border-b-2 border-b-purple-500{% else %}text-gray-500 hover:bg-gray-800/50{% endif %}"
+              data-idx="{{ loop.index0 }}">
+        {{ tab.get("label","") }}
+      </button>
+      {% endfor %}
+    </div>
+    {% for tab in block.content.get("tabs", []) %}
+    <div class="tab-panel p-4 text-sm text-gray-400 leading-relaxed {% if not loop.first %}hidden{% endif %}" data-idx="{{ loop.index0 }}">
+      {{ tab.get("content","") }}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ANIMATED CARDS #}
+  {% elif block.type == "animated_cards" %}
+  {% set anim_id = "anim-" ~ section_loop_idx ~ "-" ~ loop.index0 %}
+  {% set animation = block.content.get("animation", "stagger-up") %}
+  {% set layout = block.content.get("layout", "grid") %}
+  {% if layout == "featured" %}
+  <div class="mb-6" id="{{ anim_id }}">
+    {% for card in block.content.get("cards", []) %}
+    {% set card_color = card.get("color", "purple") %}
+    {% if loop.first %}
+    <div class="anim-card bg-gray-900 border border-gray-700 overflow-hidden opacity-0 mb-4
+                hover:border-{{ card_color }}-500/40 transition-all duration-300 cursor-default
+                {% if layout == 'featured' %}sm:flex{% endif %}">
+      {% if card.get("image_gradient") %}
+      <div class="sm:w-2/5 h-32 sm:h-auto bg-gradient-to-br from-{{ card_color }}-600/30 to-{{ card_color }}-900/30 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-gray-700 relative">
+        {% if card.get("icon") %}
+        <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="56" class="text-{{ card_color }}-400/60"></iconify-icon>
+        {% endif %}
+        {% if card.get("badge") %}
+        <span class="absolute top-3 right-3 bg-{{ card_color }}-500/20 text-{{ card_color }}-300 text-xs font-bold px-2.5 py-1 border border-{{ card_color }}-500/30">{{ card.get("badge") }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="p-5 sm:flex-1">
+        {% if card.get("icon") and not card.get("image_gradient") %}
+        <div class="w-12 h-12 bg-{{ card_color }}-500/10 border border-{{ card_color }}-500/30 flex items-center justify-center mb-3">
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="24" class="text-{{ card_color }}-400"></iconify-icon>
+        </div>
+        {% endif %}
+        <h3 class="text-lg font-black text-gray-100 mb-1">{{ card.get("title", "") }}</h3>
+        {% if card.get("subtitle") %}
+        <p class="text-xs font-bold text-{{ card_color }}-400 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+        {% endif %}
+        {% if card.get("description") %}
+        <p class="text-sm text-gray-400 leading-relaxed">{{ card.get("description", "") }}</p>
+        {% endif %}
+        {% if card.get("stats") %}
+        <div class="flex gap-4 mt-4 pt-3 border-t border-gray-800">
+          {% for stat in card.get("stats", []) %}
+          <div class="text-center">
+            <div class="text-lg font-black text-{{ card_color }}-400">{{ stat.get("value", "") }}</div>
+            <div class="text-[10px] text-gray-600">{{ stat.get("label", "") }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.get("tags") %}
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          {% for tag in card.get("tags", []) %}
+          <span class="text-[10px] font-bold bg-{{ card_color }}-500/10 text-{{ card_color }}-400 px-2 py-0.5 border border-{{ card_color }}-500/20">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    {% if loop.index == 2 %}<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{% endif %}
+    <div class="anim-card bg-gray-900 border border-gray-700 overflow-hidden opacity-0
+                hover:border-{{ card_color }}-500/40 transition-all duration-300 cursor-default">
+      {% if card.get("image_gradient") %}
+      <div class="h-20 bg-gradient-to-br from-{{ card_color }}-600/30 to-{{ card_color }}-900/30 flex items-center justify-center border-b border-gray-700 relative">
+        {% if card.get("icon") %}
+        <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="32" class="text-{{ card_color }}-400/60"></iconify-icon>
+        {% endif %}
+        {% if card.get("badge") %}
+        <span class="absolute top-2 right-2 bg-{{ card_color }}-500/20 text-{{ card_color }}-300 text-[10px] font-bold px-2 py-0.5 border border-{{ card_color }}-500/30">{{ card.get("badge") }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="p-4">
+        {% if card.get("icon") and not card.get("image_gradient") %}
+        <div class="w-10 h-10 bg-{{ card_color }}-500/10 border border-{{ card_color }}-500/30 flex items-center justify-center mb-3">
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-{{ card_color }}-400"></iconify-icon>
+        </div>
+        {% endif %}
+        <h3 class="text-sm font-black text-gray-100 mb-1">{{ card.get("title", "") }}</h3>
+        {% if card.get("subtitle") %}
+        <p class="text-[11px] font-bold text-{{ card_color }}-400 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+        {% endif %}
+        {% if card.get("description") %}
+        <p class="text-xs text-gray-400 leading-relaxed">{{ card.get("description", "") }}</p>
+        {% endif %}
+        {% if card.get("tags") %}
+        <div class="flex flex-wrap gap-1 mt-3">
+          {% for tag in card.get("tags", []) %}
+          <span class="text-[10px] font-bold bg-{{ card_color }}-500/10 text-{{ card_color }}-400 px-1.5 py-0.5 border border-{{ card_color }}-500/20">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% if loop.last %}</div>{% endif %}
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% elif layout == "horizontal" %}
+  <div class="mb-6 -mx-4 px-4" id="{{ anim_id }}">
+    <div class="flex gap-4 overflow-x-auto pb-3 scroll-snap-x">
+      {% for card in block.content.get("cards", []) %}
+      {% set card_color = card.get("color", "purple") %}
+      <div class="anim-card flex-shrink-0 w-64 sm:w-72 bg-gray-900 border border-gray-700 overflow-hidden opacity-0
+                  hover:border-{{ card_color }}-500/40 transition-all duration-300 cursor-default scroll-snap-align-start">
+        {% if card.get("image_gradient") %}
+        <div class="h-24 bg-gradient-to-br from-{{ card_color }}-600/30 to-{{ card_color }}-900/30 flex items-center justify-center border-b border-gray-700 relative">
+          {% if card.get("icon") %}
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="40" class="text-{{ card_color }}-400/60"></iconify-icon>
+          {% endif %}
+          {% if card.get("badge") %}
+          <span class="absolute top-2 right-2 bg-{{ card_color }}-500/20 text-{{ card_color }}-300 text-[10px] font-bold px-2 py-0.5 border border-{{ card_color }}-500/30">{{ card.get("badge") }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+        <div class="p-4">
+          {% if card.get("icon") and not card.get("image_gradient") %}
+          <div class="w-10 h-10 bg-{{ card_color }}-500/10 border border-{{ card_color }}-500/30 flex items-center justify-center mb-3">
+            <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-{{ card_color }}-400"></iconify-icon>
+          </div>
+          {% endif %}
+          <h3 class="text-sm font-black text-gray-100 mb-1">{{ card.get("title", "") }}</h3>
+          {% if card.get("subtitle") %}
+          <p class="text-[11px] font-bold text-{{ card_color }}-400 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+          {% endif %}
+          {% if card.get("description") %}
+          <p class="text-xs text-gray-400 leading-relaxed">{{ card.get("description", "") }}</p>
+          {% endif %}
+          {% if card.get("tags") %}
+          <div class="flex flex-wrap gap-1 mt-3">
+            {% for tag in card.get("tags", []) %}
+            <span class="text-[10px] font-bold bg-{{ card_color }}-500/10 text-{{ card_color }}-400 px-1.5 py-0.5 border border-{{ card_color }}-500/20">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" id="{{ anim_id }}">
+    {% for card in block.content.get("cards", []) %}
+    {% set card_color = card.get("color", "purple") %}
+    <div class="anim-card bg-gray-900 border border-gray-700 overflow-hidden opacity-0
+                hover:border-{{ card_color }}-500/40 transition-all duration-300 cursor-default">
+      {% if card.get("image_gradient") %}
+      <div class="h-24 bg-gradient-to-br from-{{ card_color }}-600/30 to-{{ card_color }}-900/30 flex items-center justify-center border-b border-gray-700 relative">
+        {% if card.get("icon") %}
+        <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="40" class="text-{{ card_color }}-400/60"></iconify-icon>
+        {% endif %}
+        {% if card.get("badge") %}
+        <span class="absolute top-2 right-2 bg-{{ card_color }}-500/20 text-{{ card_color }}-300 text-[10px] font-bold px-2 py-0.5 border border-{{ card_color }}-500/30">{{ card.get("badge") }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="p-4 relative">
+        {% if card.get("icon") and not card.get("image_gradient") %}
+        <div class="w-10 h-10 bg-{{ card_color }}-500/10 border border-{{ card_color }}-500/30 flex items-center justify-center mb-3">
+          <iconify-icon icon="ph:{{ card.get('icon', 'star-bold').replace('i-ph:', '') }}" width="20" class="text-{{ card_color }}-400"></iconify-icon>
+        </div>
+        {% endif %}
+        <h3 class="text-sm font-black text-gray-100 mb-1">{{ card.get("title", "") }}</h3>
+        {% if card.get("subtitle") %}
+        <p class="text-[11px] font-bold text-{{ card_color }}-400 uppercase tracking-wide mb-2">{{ card.get("subtitle") }}</p>
+        {% endif %}
+        {% if card.get("description") %}
+        <p class="text-xs text-gray-400 leading-relaxed">{{ card.get("description", "") }}</p>
+        {% endif %}
+        {% if card.get("stats") %}
+        <div class="flex gap-3 mt-3 pt-3 border-t border-gray-800">
+          {% for stat in card.get("stats", []) %}
+          <div class="text-center flex-1">
+            <div class="text-sm font-black text-{{ card_color }}-400">{{ stat.get("value", "") }}</div>
+            <div class="text-[10px] text-gray-600">{{ stat.get("label", "") }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.get("tags") %}
+        <div class="flex flex-wrap gap-1 mt-3">
+          {% for tag in card.get("tags", []) %}
+          <span class="text-[10px] font-bold bg-{{ card_color }}-500/10 text-{{ card_color }}-400 px-1.5 py-0.5 border border-{{ card_color }}-500/20">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <script>
+  (function(){
+    var el = document.getElementById('{{ anim_id }}');
+    var cards = el.querySelectorAll('.anim-card');
+    var anim = '{{ animation }}';
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (!entry.isIntersecting) return;
+        obs.unobserve(entry.target);
+        if (anim === 'flip') {
+          anime({ targets: cards, rotateY: [90, 0], opacity: [0, 1], duration: 800, delay: anime.stagger(120), easing: 'easeOutExpo' });
+        } else if (anim === 'scale-bounce') {
+          anime({ targets: cards, scale: [0.3, 1], opacity: [0, 1], duration: 600, delay: anime.stagger(100), easing: 'easeOutBack' });
+        } else if (anim === 'slide-left') {
+          anime({ targets: cards, translateX: [80, 0], opacity: [0, 1], duration: 700, delay: anime.stagger(100), easing: 'easeOutQuart' });
+        } else if (anim === 'fade-scale') {
+          anime({ targets: cards, scale: [0.8, 1], opacity: [0, 1], duration: 500, delay: anime.stagger(80), easing: 'easeOutCubic' });
+        } else {
+          anime({ targets: cards, translateY: [40, 0], opacity: [0, 1], duration: 600, delay: anime.stagger(100), easing: 'easeOutQuart' });
+        }
+      });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  })();
+  </script>
+
+  {# CUSTOM BLOCKS #}
+  {% elif custom_blocks is defined and block.type in custom_blocks %}
+  {{ render_custom_block(custom_blocks[block.type].html_template, block, section) }}
+
+  {% endif %}
+</div>
+{% endfor %}

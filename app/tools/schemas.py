@@ -33,6 +33,7 @@ DIRECTORY_SCHEMA = {
                                         "timeline", "alert", "badges", "checklist",
                                         "quote", "key_value", "chart", "progress",
                                         "accordion", "tabs",
+                                        "file_tree", "callout", "flow_diagram",
                                     ],
                                     "description": "Block layout type",
                                 },
@@ -59,7 +60,10 @@ DIRECTORY_SCHEMA = {
                                     "chart: {type: 'bar'|'pie'|'line'|'doughnut', title: str, labels: [str], datasets: [{label: str, data: [number], color: str}]}. "
                                     "progress: {items: [{label: str, value: number, max: number, color: str}]}. "
                                     "accordion: {items: [{title: str, content: str}]}. "
-                                    "tabs: {tabs: [{label: str, content: str}]}.",
+                                    "tabs: {tabs: [{label: str, content: str}]}. "
+                                    "file_tree: {items: [{name: str, type: 'dir'|'file', indent: number, comment: str}]}. "
+                                    "callout: {text: str, title: str, color: 'purple'|'amber'|'emerald'|'rose', icon: str}. "
+                                    "flow_diagram: {nodes: [{text: str, type: 'normal'|'highlight'|'sub'}]}.",
                                 },
                             },
                             "required": ["type", "content"],
@@ -71,6 +75,12 @@ DIRECTORY_SCHEMA = {
         },
     },
     "required": ["title", "subtitle", "sections"],
+}
+
+DIRECTORY_SCHEMA["properties"]["theme"] = {
+    "type": "string",
+    "enum": ["default", "code_guide"],
+    "description": "Visual theme: 'default' for light, 'code_guide' for dark developer theme",
 }
 
 PAGE_ROUTER_SCHEMA = {
